@@ -9,8 +9,8 @@ module CloudDrive
     attr_reader :access_token, :metadata_url, :content_url, :email, :nodes
 
     def initialize(email, client_id, client_secret)
-      @cache_file = File.expand_path('~/.cache/clouddrive')
       @email = email
+      @cache_file = File.expand_path("~/.clouddrive/#{email}.cache")
       @client_id = client_id
       @client_secret = client_secret
 
