@@ -76,6 +76,8 @@ module CloudDrive
         previous_node = match
       end
 
+      return previous_node if match == nil
+
       match
     end
 
@@ -152,7 +154,11 @@ module CloudDrive
 
     def upload_dir(src_path, dest_root)
       src_path = File.expand_path(src_path)
-      dest_root = dest_root.gsub(/\/$/, '')
+
+      dest_root = get_path_array(dest_root)
+      dest_root.push(get_path_array(src_path).last)
+      dest_root = get_path_string(dest_root)
+
       retval = []
       Find.find(src_path) do |file|
         # Skip root directory, no need to make it
@@ -165,9 +171,9 @@ module CloudDrive
         if exists?(remote_file)
           retval.push({
               :success => false,
-              :data => [
-                  "message" => "Remote file exists"
-              ]
+              :data => {
+                  "message" => "Remote file #{remote_file} exists"
+              }
           })
           next
         end
