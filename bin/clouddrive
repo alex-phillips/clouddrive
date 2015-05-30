@@ -1,0 +1,60 @@
+#!/usr/bin/env ruby
+
+require 'escort'
+require 'clouddrive'
+require "clouddrive/commands/init_command"
+require "clouddrive/commands/sync_command"
+require "clouddrive/commands/upload_command"
+
+banner = <<'BANNER'
+   ________                ______       _
+  / ____/ /___  __  ______/ / __ \_____(_)   _____
+ / /   / / __ \/ / / / __  / / / / ___/ / | / / _ \
+/ /___/ / /_/ / /_/ / /_/ / /_/ / /  / /| |/ /  __/
+\____/_/\____/\__,_/\__,_/_____/_/  /_/ |___/\___/
+BANNER
+
+Escort::App.create do |app|
+  app.version CloudDrive::VERSION
+  app.summary "CloudDrive"
+  app.description "A command line interface for managing data in Amazon's CloudDrive."
+
+  # Initialization
+  app.command :init do |command|
+    command.summary "Initialize CloudDrive"
+    command.description "Initialize the the app with your Amazon CloudDrive account and API credentials"
+    command.options do |opts|
+      opts.opt :email, "Email", :short => '-e', :long => '--email', :type => :string
+      opts.opt :client_id, "Client ID", :short => '-i', :long => '--client_id', :type => :string
+      opts.opt :client_secret, "Client Secret", :short => '-s', :long => '--client_secret', :type => :string
+    end
+
+    command.action do |options, arguments|
+      CloudDrive::InitCommand.new(options, arguments).execute
+    end
+  end
+
+  app.command :upload do |command|
+    command.summary "Upload to CloudDrive"
+    command.description "Upload files or folders to CloudDrive and save in the given destination path"
+
+    command.action do |options, arguments|
+      CloudDrive::UploadCommand.new(options, arguments).execute
+    end
+  end
+
+  app.command :sync do |command|
+    command.summary "Sync cache"
+    command.description "Sync local cache with remote changes"
+
+    command.action do |options, arguments|
+      CloudDrive::SyncCommand.new(options, arguments).execute
+    end
+  end
+
+  # Default action
+  app.action do |options, arguments|
+    puts banner
+    puts `ruby #{__FILE__} --help`
+  end
+end
