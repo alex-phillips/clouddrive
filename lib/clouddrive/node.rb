@@ -1,6 +1,8 @@
 require 'rest-client'
 require 'pathname'
 require 'find'
+require 'digest/md5'
+require 'json'
 
 module CloudDrive
 
@@ -14,6 +16,9 @@ module CloudDrive
       path = []
       loop do
         path.push node["name"]
+
+        break if node.has_key?('isRoot') && node['isRoot'] == true
+
         node = @account.nodes[node["parents"][0]]
 
         break if node.has_key?('isRoot') && node['isRoot'] === true
@@ -81,10 +86,37 @@ module CloudDrive
       match
     end
 
-    def exists?(path)
-      return false if find_by_path(path) === nil
+    # If given a local file, the MD5 will be compared as well
+    def exists?(remote_file, local_file = nil)
+      if (file = find_by_path(remote_file)) == nil
+        return {
+            :success => false,
+            :data => {
+                "message" => "File #{remote_file} does not exist"
+            }
+        }
+      end
 
-      true
+      retval = {
+          :success => true,
+          :data => {
+              "message" => "File #{remote_file} exists"
+          }
+      }
+
+      if local_file != nil
+        if file["contentProperties"] != nil && file["contentProperties"]["md5"] != nil
+          if Digest::MD5.file(local_file).to_s != file["contentProperties"]["md5"]
+            retval[:data]["message"] = "File #{remote_file} exists but checksum doesn't match"
+          else
+            retval[:data]["message"] = "File #{remote_file} exists and is identical"
+          end
+        else
+          retval[:data]["message"] = "File #{remote_file} exists, but no checksum is available"
+        end
+      end
+
+      retval
     end
 
     def fetch_metadata_by_id(id)
@@ -152,7 +184,7 @@ module CloudDrive
       nil
     end
 
-    def upload_dir(src_path, dest_root)
+    def upload_dir(src_path, dest_root, show_progress = false)
       src_path = File.expand_path(src_path)
 
       dest_root = get_path_array(dest_root)
@@ -167,18 +199,26 @@ module CloudDrive
         path_info = Pathname.new(file)
         remote_dest = path_info.dirname.sub(src_path, dest_root).to_s
 
-        remote_file = "#{remote_dest}/#{path_info.basename}"
-        if exists?(remote_file)
-          retval.push({
-              :success => false,
-              :data => {
-                  "message" => "Remote file #{remote_file} exists"
-              }
-          })
-          next
+        result = upload_file(file, remote_dest)
+        if show_progress == true
+          if result[:success] == true
+            puts "Successfully uploaded file #{file}: #{result[:data].to_json}"
+          else
+            puts "Failed to uploaded file #{file}: #{result[:data].to_json}"
+          end
         end
 
-        retval.push(upload_file(file, remote_dest))
+        retval.push(result)
+
+        # Since uploading a directory can take a while (depending on number/size of files)
+        # we will check if we need to renew our authorization after each file upload to
+        # make sure our authentication doesn't expire.
+        if (Time.new.to_i - @account.token_store["last_authorized"]) > 60
+          result = @account.renew_authorization
+          if result[:success] === false
+            raise "Failed to renew authorization: #{result[:data].to_json}"
+          end
+        end
       end
 
       retval
@@ -193,6 +233,13 @@ module CloudDrive
       path_info = Pathname.new(src_path)
       dest_path = get_path_string(get_path_array(dest_path))
       dest_folder = create_directory_path(dest_path)
+
+      result = exists?("#{dest_path}/#{path_info.basename}", src_path)
+      if result[:success] == true
+        retval[:data] = result[:data]
+
+        return retval
+      end
 
       body = {
           :metadata => {
