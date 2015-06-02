@@ -89,6 +89,17 @@ module CloudDrive
     # If given a local file, the MD5 will be compared as well
     def exists?(remote_file, local_file = nil)
       if (file = find_by_path(remote_file)) == nil
+        if local_file != nil
+          if (file = find_by_md5(Digest::MD5.file(local_file).to_s)) != nil
+            path = build_node_path(file)
+            return {
+                :success => true,
+                :data => {
+                    "message" => "File with same MD5 exists at #{path}: #{file.to_json}"
+                }
+            }
+          end
+        end
         return {
             :success => false,
             :data => {
@@ -122,6 +133,18 @@ module CloudDrive
     def fetch_metadata_by_id(id)
       RestClient.get("#{@account.metadata_url}nodes/id?fields=[\"properties\"]", :Authorization => "Bearer #{@account.access_token}") do |response, request, result|
         return JSON.parse(response.body) if response.code === 200
+      end
+
+      nil
+    end
+
+    def find_by_md5(hash)
+      @account.nodes.each do |id, node|
+        if node["contentProperties"] != nil && node["contentProperties"]["md5"] != nil
+          if node["contentProperties"]["md5"] == hash
+            return node
+          end
+        end
       end
 
       nil
