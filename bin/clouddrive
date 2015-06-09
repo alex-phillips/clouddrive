@@ -9,6 +9,7 @@ require "clouddrive/commands/init_command"
 require "clouddrive/commands/sync_command"
 require "clouddrive/commands/clear_cache_command"
 require "clouddrive/commands/upload_command"
+require "clouddrive/commands/metadata_command"
 require "yaml"
 
 banner = <<'BANNER'
@@ -73,6 +74,15 @@ Escort::App.create do |app|
 
     command.action do |options, arguments|
       CloudDrive::ClearCacheCommand.new(options, arguments).execute
+    end
+  end
+
+  app.command :metadata do |command|
+    command.summary "Retrieve file metadata"
+    command.description "Returns a files metadata given the remote file path"
+
+    command.action do |options, arguments|
+      CloudDrive::MetadataCommand.new(options, arguments).execute
     end
   end
 
