@@ -20,15 +20,14 @@ module CloudDrive
       node = CloudDrive::Node.new(account)
 
       if File.directory?(src)
-        results = node.upload_dir(src, dest)
-        results.each do |result|
-          if result[:success] == false
-            puts result[:data]["message"]
-          end
-        end
+        node.upload_dir(src, dest, true)
       else
         result = node.upload_file(src, dest)
-        puts result.to_json
+        if result[:success] == true
+          puts "Successfully uploaded file #{src}: #{result[:data].to_json}"
+        else
+          puts "Failed to uploaded file #{src}: #{result[:data].to_json}"
+        end
       end
     end
 

@@ -1,18 +1,34 @@
 require 'json'
 require 'cgi'
 require 'rest-client'
+require 'sqlite3'
 
 module CloudDrive
 
   class Account
 
-    attr_reader :access_token, :metadata_url, :content_url, :email, :token_store
+    attr_reader :access_token, :metadata_url, :content_url, :email, :token_store, :db
 
     def initialize(email, client_id, client_secret, auth_url = nil)
       @email = email
       @cache_file = File.expand_path("~/.clouddrive/#{email}.cache")
       @client_id = client_id
       @client_secret = client_secret
+
+      @db = SQLite3::Database.new(File.expand_path("~/.clouddrive/#{@email}.db"))
+      if @db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='nodes';").empty?
+        @db.execute <<-SQL
+         CREATE TABLE nodes(
+            id VARCHAR PRIMARY KEY NOT NULL,
+            name VARCHAR NOT NULL,
+            kind VARCHAR NOT NULL,
+            md5 VARCHAR,
+            created DATETIME NOT NULL,
+            modified DATETIME NOT NULL,
+            raw_data TEXT NOT NULL
+         );
+        SQL
+      end
 
       authorize(auth_url)
 
@@ -201,10 +217,6 @@ module CloudDrive
     end
 
     def sync
-      if !@token_store.has_key?("nodes")
-        @token_store["nodes"] = {}
-      end
-
       if !@token_store.has_key?("checkpoint")
         @token_store["checkpoint"] = nil
       end
@@ -224,15 +236,19 @@ module CloudDrive
             data = response.body.split("\n")
             data.each do |xary|
               xary = JSON.parse(xary)
+              if xary.has_key?("reset") && xary["reset"] == true
+                @db.execute("DELETE FROM nodes WHERE 1=1")
+              end
+
               if xary.has_key?("end") && xary["end"] == true
                 loop = false
               elsif xary.has_key?("nodes")
                 @token_store["checkpoint"] = xary["checkpoint"]
                 xary["nodes"].each do |node|
                   if node["status"] == "PURGED"
-                    @token_store["nodes"].delete(node["id"])
+                    delete_node_by_id(node["id"])
                   else
-                    @token_store["nodes"][node["id"]] = node
+                    save_node(node)
                   end
                 end
               end
@@ -246,9 +262,33 @@ module CloudDrive
       save_token_store
     end
 
-    def update_node(id, node)
-      @token_store["nodes"][id] = node
-      save_token_store
+    def delete_node_by_id(id)
+      begin
+        @db.execute("DELETE FROM nodes WHERE id = ?", id)
+      rescue SQLite3::Exception => e
+        puts "Exception deleting node with ID #{id}: #{e}"
+      end
+    end
+
+    def save_node(node)
+      md5 = nil
+      if node["contentProperties"] != nil && node["contentProperties"]["md5"] != nil
+        md5 = node["contentProperties"]["md5"]
+      end
+
+      if node["name"] == nil && node["isRoot"] != nil && node["isRoot"] == true
+        node["name"] = "root"
+      end
+
+      begin
+        result = db.execute("INSERT OR REPLACE INTO nodes (id, name, kind, md5, created, modified, raw_data)
+          VALUES (?, ?, ?, ?, ?, ?, ?);", [node["id"], node["name"], node["kind"], md5, node["createdDate"], node["modifiedDate"], node.to_json])
+      rescue SQLite3::Exception => e
+        if node["name"] == nil
+          puts "Exception saving node: #{e}"
+          puts node.to_json
+        end
+      end
     end
 
   end

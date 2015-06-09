@@ -12,6 +12,10 @@ module CloudDrive
     def read_config
       if File.exists?("#{@config_path}config.yaml")
         return YAML.load_file("#{@config_path}config.yaml")
+      else
+        if !File.exists?(@config_path)
+          Dir.mkdir(@config_path)
+        end
       end
 
       {

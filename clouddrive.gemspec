@@ -9,9 +9,9 @@ Gem::Specification.new do |spec|
   spec.authors       = ["Alex Phillips"]
   spec.email         = ["exonintrendo@gmail.com"]
 
-  spec.summary       = %q{Ruby SDK for Amazon's CloudDrive}
-  # spec.description   = %q{TODO: Write a longer description or delete this line.}
-  spec.homepage      = "http://www.wootables.com"
+  spec.summary       = %q{CloudDrive for Ruby}
+  spec.description   = %q{Ruby SDK and command line application for Amazon's CloudDrive}
+  spec.homepage      = "https://github.com/exonintrendo/clouddrive"
   spec.license       = "MIT"
 
   # Prevent pushing this gem to RubyGems.org by setting 'allowed_push_host', or
@@ -23,10 +23,14 @@ Gem::Specification.new do |spec|
   # end
 
   spec.files         = `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features)/}) } + Dir['lib/**/*.rb']
-  spec.bindir        = "exe"
-  spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
+  spec.bindir        = "bin"
+  spec.executables   = spec.files.grep(%r{^bin/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
 
   spec.add_development_dependency "bundler", "~> 1.9"
   spec.add_development_dependency "rake", "~> 10.0"
+
+  spec.add_runtime_dependency "rest-client", "~> 1.8"
+  spec.add_runtime_dependency "escort", "~> 0.4"
+  spec.add_runtime_dependency "sqlite3", "~>1.3"
 end

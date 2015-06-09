@@ -19,7 +19,12 @@ module CloudDrive
 
         break if node.has_key?('isRoot') && node['isRoot'] == true
 
-        node = @account.nodes[node["parents"][0]]
+        results = find_by_id(node["parents"][0])
+        if results[:success] == false
+          raise "No parent node found with ID #{node["parents"][0]}"
+        end
+
+        node = results[:data]
 
         break if node.has_key?('isRoot') && node['isRoot'] === true
       end
@@ -55,7 +60,7 @@ module CloudDrive
         retval[:data] = data
         if response.code === 201
           retval[:success] = true
-          @account.update_node(data["id"], data)
+          @account.save_node(data)
         end
       end
 
@@ -118,7 +123,7 @@ module CloudDrive
       if local_file != nil
         if file["contentProperties"] != nil && file["contentProperties"]["md5"] != nil
           if Digest::MD5.file(local_file).to_s != file["contentProperties"]["md5"]
-            retval[:data]["message"] = "File #{remote_file} exists but checksum doesn't match"
+            retval[:data]["message"] = "File #{remote_file} exists butuum doesn't match"
           else
             retval[:data]["message"] = "File #{remote_file} exists and is identical"
           end
@@ -130,24 +135,53 @@ module CloudDrive
       retval
     end
 
-    def fetch_metadata_by_id(id)
-      RestClient.get("#{@account.metadata_url}nodes/id?fields=[\"properties\"]", :Authorization => "Bearer #{@account.access_token}") do |response, request, result|
-        return JSON.parse(response.body) if response.code === 200
+    def find_by_id(id)
+      retval = {
+          :success => false,
+          :data => {}
+      }
+
+      results = @account.db.execute("SELECT raw_data FROM nodes WHERE id = ?;", id)
+      if results.empty?
+        return retval
       end
 
-      nil
+      if results.count > 1
+        raise "Multiple nodes with same ID found: #{results[:data].to_json}"
+      end
+
+      {
+          :success => true,
+          :data => JSON.parse(results[0][0])
+      }
     end
 
     def find_by_md5(hash)
-      @account.nodes.each do |id, node|
-        if node["contentProperties"] != nil && node["contentProperties"]["md5"] != nil
-          if node["contentProperties"]["md5"] == hash
-            return node
-          end
-        end
+
+      results = @account.db.execute("SELECT raw_data FROM nodes WHERE md5 = ?;", hash)
+      if results.empty?
+        return nil
       end
 
-      nil
+      if results.count > 1
+        raise "Multiple nodes with same MD5: #{results.to_json}"
+      end
+
+      JSON.parse(results[0][0])
+    end
+
+    def find_by_name(name)
+      retval = []
+      results = @account.db.execute("SELECT raw_data FROM nodes WHERE name = ?;", name)
+      if results.empty?
+        return retval
+      end
+
+      results.each do |result|
+          retval.push(JSON.parse(result[0]))
+      end
+
+      retval
     end
 
     def find_by_path(path)
@@ -155,29 +189,19 @@ module CloudDrive
       path = path.gsub(/\/$/, '')
       path_info = Pathname.new(path)
 
-      found_nodes = {}
-      @account.nodes.each do |id, node|
-        if node["name"] == path_info.basename.to_s
-          found_nodes[id] = node
-        end
+      found_nodes = find_by_name(path_info.basename.to_s)
+      if found_nodes.empty?
+        return nil
       end
 
-      return nil if found_nodes.empty?
-
       match = nil
-      found_nodes.each do |id, node|
+      found_nodes.each do |node|
         if build_node_path(node) == path
           match = node
         end
       end
 
       match
-    end
-
-    def get_metadata_by_id(id)
-      return @account.nodes[id] if @account.nodes.has_key? id
-
-      nil
     end
 
     def get_path_array(path)
@@ -198,7 +222,12 @@ module CloudDrive
     end
 
     def get_root
-      @account.nodes.each do |id, node|
+      results = find_by_name('root')
+      if results.empty?
+        raise "No node by the name of 'root' found in database"
+      end
+
+      results.each do |node|
         if node.has_key?('isRoot') && node['isRoot'] === true
           return node
         end
@@ -279,7 +308,7 @@ module CloudDrive
         retval[:data] = JSON.parse(response.body)
         if response.code === 201
           retval[:success] = true
-          @account.update_node(retval[:data]["id"], retval[:data])
+          @account.save_node(retval[:data])
         end
       end
 

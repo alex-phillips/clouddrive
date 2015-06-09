@@ -1,10 +1,15 @@
 #!/usr/bin/env ruby
 
+# Exit cleanly from an early interrupt
+Signal.trap("INT") { exit 1 }
+
 require 'escort'
 require 'clouddrive'
 require "clouddrive/commands/init_command"
 require "clouddrive/commands/sync_command"
+require "clouddrive/commands/clear_cache_command"
 require "clouddrive/commands/upload_command"
+require "yaml"
 
 banner = <<'BANNER'
    ________                ______       _
@@ -27,10 +32,20 @@ Escort::App.create do |app|
       opts.opt :email, "Email", :short => '-e', :long => '--email', :type => :string
       opts.opt :client_id, "Client ID", :short => '-i', :long => '--client_id', :type => :string
       opts.opt :client_secret, "Client Secret", :short => '-s', :long => '--client_secret', :type => :string
+      opts.opt :auth_url, "Authorization URL", :short => '-u', :long => '--auth_url', :type => :string
     end
 
     command.action do |options, arguments|
       CloudDrive::InitCommand.new(options, arguments).execute
+    end
+  end
+
+  app.command :renew do |command|
+    command.summary "Renew authorization"
+    command.description "Force authorization renewal with CloudDrive"
+
+    command.action do |options, arguments|
+      CloudDrive::RenewCommand.new(options, arguments).execute
     end
   end
 
@@ -49,6 +64,15 @@ Escort::App.create do |app|
 
     command.action do |options, arguments|
       CloudDrive::SyncCommand.new(options, arguments).execute
+    end
+  end
+
+  app.command :clearcache do |command|
+    command.summary "Clear cache"
+    command.description "Clear the local CloudDrive cache"
+
+    command.action do |options, arguments|
+      CloudDrive::ClearCacheCommand.new(options, arguments).execute
     end
   end
 
