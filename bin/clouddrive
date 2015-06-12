@@ -1,94 +1,137 @@
-#!/usr/bin/env ruby
-
-# Exit cleanly from an early interrupt
-Signal.trap("INT") { exit 1 }
-
-require 'escort'
+require 'thor'
 require 'clouddrive'
-require "clouddrive/commands/init_command"
-require "clouddrive/commands/sync_command"
-require "clouddrive/commands/clear_cache_command"
-require "clouddrive/commands/upload_command"
-require "clouddrive/commands/metadata_command"
-require "yaml"
+require 'yaml'
 
-banner = <<'BANNER'
-   ________                ______       _
-  / ____/ /___  __  ______/ / __ \_____(_)   _____
- / /   / / __ \/ / / / __  / / / / ___/ / | / / _ \
-/ /___/ / /_/ / /_/ / /_/ / /_/ / /  / /| |/ /  __/
-\____/_/\____/\__,_/\__,_/_____/_/  /_/ |___/\___/
-BANNER
+module CloudDrive
+  class CLI < Thor
 
-Escort::App.create do |app|
-  app.version CloudDrive::VERSION
-  app.summary "CloudDrive"
-  app.description "A command line interface for managing data in Amazon's CloudDrive."
-
-  # Initialization
-  app.command :init do |command|
-    command.summary "Initialize CloudDrive"
-    command.description "Initialize the the app with your Amazon CloudDrive account and API credentials"
-    command.options do |opts|
-      opts.opt :email, "Email", :short => '-e', :long => '--email', :type => :string
-      opts.opt :client_id, "Client ID", :short => '-i', :long => '--client_id', :type => :string
-      opts.opt :client_secret, "Client Secret", :short => '-s', :long => '--client_secret', :type => :string
-      opts.opt :auth_url, "Authorization URL", :short => '-u', :long => '--auth_url', :type => :string
+    def initialize(*args)
+      super
+      @config_path = File.expand_path('~/.clouddrive') + "/"
     end
 
-    command.action do |options, arguments|
-      CloudDrive::InitCommand.new(options, arguments).execute
+    desc "init", "Initialize app with Amazon e-mail and CloudDrive credentials"
+    option :email, :aliases => :e
+    option :client_id, :aliases => :i
+    option :client_secret, :aliases => :s
+    option :auth_url, :aliases => :u
+    def init
+      email = options[:email]
+      client_id = options[:client_id]
+      client_secret = options[:client_secret]
+      auth_url = options[:auth_url]
+
+      config = read_config
+
+      if email != nil
+        config[:email] = email
+      end
+
+      if client_id != nil
+        config[:client_id] = client_id
+      end
+
+      if client_secret != nil
+        config[:client_secret] = client_secret
+      end
+
+      if config[:email] == nil
+        puts "Email is required for authorization"
+        exit
+      end
+
+      if config[:client_id] == nil || config[:client_secret] == nil
+        puts "Amazon CloudDrive API credentials required"
+        exit
+      end
+
+      save_config(config)
+
+      account = CloudDrive::Account.new(config[:email], config[:client_id], config[:client_secret])
+      result = account.authorize(auth_url)
+      if result[:success] === false
+        if result[:data]["message"] == "Initial authorization required."
+          puts "Initiali authorization required. Navigate to the following URL and paste in the redirect URL here."
+          url = ask(result[:data]["auth_url"] + "\n")
+          result = account.authorize(url)
+          if result[:success]
+            puts "Successfully authenticated with Amazon CloudDrive"
+          else
+            puts "Failed to authenticate with Amazon CloudDrive: #{result[:data].to_json}"
+          end
+        end
+      else
+        puts "Already authenticated with Amazon CloudDrive"
+      end
     end
-  end
 
-  app.command :renew do |command|
-    command.summary "Renew authorization"
-    command.description "Force authorization renewal with CloudDrive"
-
-    command.action do |options, arguments|
-      CloudDrive::RenewCommand.new(options, arguments).execute
+    desc "sync", "Sync local cache with Amazon CloudDrive"
+    long_desc <<'LONGDESC'
+    Syncing the nodes from Amazon CloudDrive to a local database allows for quicker
+    API calls as well as the ability for some operations to be performed 'offline'.
+    Before running any commands that alter data remotely, the local cache should
+    always be synced up.
+LONGDESC
+    def sync
+      setup
+      @account.authorize
+      @account.sync
     end
-  end
 
-  app.command :upload do |command|
-    command.summary "Upload to CloudDrive"
-    command.description "Upload files or folders to CloudDrive and save in the given destination path"
-
-    command.action do |options, arguments|
-      CloudDrive::UploadCommand.new(options, arguments).execute
+    desc "clearcace", "Clear local nodes cache"
+    def clearcache
+      setup
+      @account.authorize
+      @account.clear_cache
     end
-  end
 
-  app.command :sync do |command|
-    command.summary "Sync cache"
-    command.description "Sync local cache with remote changes"
+    desc 'metadata REMOTE_PATH', 'Retrieve the node\'s metadata given its remote path'
+    def metadata(path)
+      setup
+      @account.authorize
+      api = CloudDrive::Node.new(@account)
 
-    command.action do |options, arguments|
-      CloudDrive::SyncCommand.new(options, arguments).execute
+      if (node = api.find_by_path(path)) != nil
+        puts node.to_json
+      else
+        puts "File does not exist."
+      end
     end
-  end
 
-  app.command :clearcache do |command|
-    command.summary "Clear cache"
-    command.description "Clear the local CloudDrive cache"
+    private
 
-    command.action do |options, arguments|
-      CloudDrive::ClearCacheCommand.new(options, arguments).execute
+    def setup
+      config = read_config
+      @account = CloudDrive::Account.new(config[:email], config[:client_id], config[:client_secret])
     end
-  end
 
-  app.command :metadata do |command|
-    command.summary "Retrieve file metadata"
-    command.description "Returns a files metadata given the remote file path"
+    def read_config
+      if File.exists?("#{@config_path}config.yaml")
+        return YAML.load_file("#{@config_path}config.yaml")
+      else
+        if !File.exists?(@config_path)
+          Dir.mkdir(@config_path)
+        end
+      end
 
-    command.action do |options, arguments|
-      CloudDrive::MetadataCommand.new(options, arguments).execute
+      {
+          :email => nil,
+          :client_id => nil,
+          :client_secret => nil
+      }
     end
-  end
 
-  # Default action
-  app.action do |options, arguments|
-    puts banner
-    puts `ruby #{__FILE__} --help`
+    def save_config config
+      if !File.exists?(@config_path)
+        Dir.mkdir(@config_path)
+      end
+
+      File.open("#{@config_path}config.yaml", 'w') do |file|
+        file.write(config.to_yaml)
+      end
+    end
+
   end
 end
+
+CloudDrive::CLI.start( ARGV )

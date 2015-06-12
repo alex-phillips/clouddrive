@@ -31,6 +31,6 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake", "~> 10.0"
 
   spec.add_runtime_dependency "rest-client", "~> 1.8"
-  spec.add_runtime_dependency "escort", "~> 0.4"
+  spec.add_runtime_dependency "thor", "~> 0.19"
   spec.add_runtime_dependency "sqlite3", "~>1.3"
 end
