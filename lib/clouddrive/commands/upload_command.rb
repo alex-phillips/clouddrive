@@ -17,6 +17,7 @@ module CloudDrive
       end
 
       account = CloudDrive::Account.new(config[:email], config[:client_id], config[:client_secret])
+      account.authorize
       node = CloudDrive::Node.new(account)
 
       if File.directory?(src)

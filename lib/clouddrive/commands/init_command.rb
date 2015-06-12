@@ -35,7 +35,14 @@ module CloudDrive
 
       save_config(config)
 
-      CloudDrive::Account.new(config[:email], config[:client_id], config[:client_secret], auth_url)
+      account = CloudDrive::Account.new(config[:email], config[:client_id], config[:client_secret])
+      result = account.authorize(auth_url)
+      if result[:success] === false
+        if result[:data]["message"] == "Initial authorization required."
+          puts "Initiali authorization required. Navigate to the following URL and paste in the redirect URL here."
+          puts result[:data]["auth_url"]
+        end
+      end
     end
 
   end

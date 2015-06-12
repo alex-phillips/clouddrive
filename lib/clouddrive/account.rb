@@ -9,7 +9,7 @@ module CloudDrive
 
     attr_reader :access_token, :metadata_url, :content_url, :email, :token_store, :db
 
-    def initialize(email, client_id, client_secret, auth_url = nil)
+    def initialize(email, client_id, client_secret)
       @email = email
       @cache_file = File.expand_path("~/.clouddrive/#{email}.cache")
       @client_id = client_id
@@ -29,8 +29,47 @@ module CloudDrive
          );
         SQL
       end
+    end
 
-      authorize(auth_url)
+    def authorize(auth_url = nil)
+      retval = {
+        :success => true,
+        :data => {}
+      }
+
+      @token_store = {
+          "checkpoint" => nil,
+          "nodes" => {}
+      }
+
+      if File.exists?(@cache_file)
+        @token_store = JSON.parse(File.read(@cache_file))
+      end
+
+      if !@token_store.has_key?("access_token")
+        if auth_url.nil?
+          retval[:success] = false
+          retval[:data]["message"] = "Initial authorization required."
+          retval[:data]["auth_url"] = "https://www.amazon.com/ap/oa?client_id=#{@client_id}&scope=clouddrive%3Aread%20clouddrive%3Awrite&response_type=code&redirect_uri=http://localhost"
+
+          return retval
+        else
+          data = request_authorization(auth_url)
+        end
+
+        if data[:success] === true
+          @token_store = data[:data]
+        else
+          return data
+        end
+
+        save_token_store
+      elsif (Time.new.to_i - @token_store["last_authorized"]) > 60
+        data = renew_authorization
+        if data[:success] === false
+          return data
+        end
+      end
 
       @access_token = @token_store["access_token"]
 
@@ -48,34 +87,8 @@ module CloudDrive
 
       @metadata_url = @token_store["metadataUrl"]
       @content_url = @token_store["contentUrl"]
-    end
 
-    def authorize(auth_url)
-      @token_store = {
-          "checkpoint" => nil,
-          "nodes" => {}
-      }
-
-      if File.exists?(@cache_file)
-        @token_store = JSON.parse(File.read(@cache_file))
-      end
-
-      if !@token_store.has_key?("access_token")
-        data = request_authorization(auth_url)
-
-        if data[:success] === true
-          @token_store = data[:data]
-        else
-          raise RuntimeError, data[:data]
-        end
-
-        save_token_store
-      elsif (Time.new.to_i - @token_store["last_authorized"]) > 60
-        data = renew_authorization
-        if data[:success] === false
-          raise "Failed to renew authorization: #{data[:data].to_json}"
-        end
-      end
+      retval
     end
 
     def clear_cache
@@ -87,7 +100,7 @@ module CloudDrive
     def get_endpoint
       retval = {
           :success => false,
-          :data => []
+          :data => {}
       }
       RestClient.get("https://cdws.us-east-1.amazonaws.com/drive/v1/account/endpoint", {:Authorization => "Bearer #{@access_token}"}) do |response, request, result|
         retval[:data] = JSON.parse(response.body)
@@ -102,7 +115,7 @@ module CloudDrive
     def get_quota
       retval = {
           :success => false,
-          :data => []
+          :data => {}
       }
 
       RestClient.get("#{@metadata_url}account/quota", {:Authorization => "Bearer #{@access_token}"}) do |response, request, result|
@@ -118,7 +131,7 @@ module CloudDrive
     def get_usage
       retval = {
           :success => false,
-          :data => []
+          :data => {}
       }
 
       RestClient.get("#{@metadata_url}account/usage", {:Authorization => "Bearer #{@access_token}"}) do |response, request, result|
@@ -138,18 +151,12 @@ module CloudDrive
     def request_authorization(auth_url)
       retval = {
           :success => false,
-          :data => []
+          :data => {}
       }
-
-      if (auth_url == nil)
-        puts "Initiali authorization required. Navigate to the following URL and pass the redirected URL into the constructor."
-        puts "https://www.amazon.com/ap/oa?client_id=#{@client_id}&scope=clouddrive%3Aread%20clouddrive%3Awrite&response_type=code&redirect_uri=http://localhost"
-        exit
-      end
 
       params = CGI.parse(URI.parse(auth_url).query)
       if !params.has_key?('code')
-        retval[:data] = "No authorization code exists in the callback URL: #{params}"
+        retval[:data]["message"] = "No authorization code exists in the callback URL: #{params}"
 
         return retval
       end
@@ -181,7 +188,7 @@ module CloudDrive
     def renew_authorization
       retval = {
           :success => false,
-          :data => []
+          :data => {}
       }
 
       body = {
