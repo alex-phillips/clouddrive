@@ -78,7 +78,7 @@ LONGDESC
       @account.sync
     end
 
-    desc "clearcace", "Clear local nodes cache"
+    desc "clearcache", "Clear local nodes cache"
     def clearcache
       setup
       @account.authorize
