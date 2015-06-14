@@ -48,9 +48,13 @@ module CloudDrive
 
       if !@token_store.has_key?("access_token")
         if auth_url.nil?
-          retval[:success] = false
-          retval[:data]["message"] = "Initial authorization required."
-          retval[:data]["auth_url"] = "https://www.amazon.com/ap/oa?client_id=#{@client_id}&scope=clouddrive%3Aread%20clouddrive%3Awrite&response_type=code&redirect_uri=http://localhost"
+          retval = {
+            :success => false,
+            :data => {
+              "message" => "Initial authorization required",
+              "auth_url" => "https://www.amazon.com/ap/oa?client_id=#{@client_id}&scope=clouddrive%3Aread%20clouddrive%3Awrite&response_type=code&redirect_uri=http://localhost"
+            }
+          }
 
           return retval
         else
