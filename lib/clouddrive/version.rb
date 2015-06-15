@@ -1,3 +1,3 @@
 module CloudDrive
-  VERSION = "0.0.0000001"
+  VERSION = "0.0.1"
 end

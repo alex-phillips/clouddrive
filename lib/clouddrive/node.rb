@@ -68,6 +68,11 @@ module CloudDrive
     end
 
     def create_directory_path(path)
+      retval = {
+        :success => true,
+        :data => {}
+      }
+
       path = get_path_array(path)
       previous_node = get_root
 
@@ -77,7 +82,7 @@ module CloudDrive
         if (match = find_by_path(xary.join('/'))) === nil
           result = create_new_folder(folder, previous_node["id"])
           if result[:success] === false
-            raise RuntimeError, result[:data]
+            return result
           end
 
           match = result[:data]
@@ -86,9 +91,13 @@ module CloudDrive
         previous_node = match
       end
 
-      return previous_node if match == nil
+      if match == nil
+        retval[:data] = previous_node
+      else
+        retval[:data] = match
+      end
 
-      match
+      retval
     end
 
     # If given a local file, the MD5 will be compared as well

@@ -1,6 +1,7 @@
 require 'thor'
 require 'clouddrive'
 require 'yaml'
+require 'json'
 
 module CloudDrive
   class CLI < Thor
@@ -94,6 +95,20 @@ LONGDESC
         puts node.to_json
       else
         puts "File does not exist."
+      end
+    end
+
+    desc "mkdir REMOTE_PATH", "Create (recursively) a new remote directory"
+    def mkdir(path)
+      setup
+      @account.authorize
+      node = CloudDrive::Node.new(@account)
+
+      result = node.create_directory_path(path)
+      if result[:success]
+        puts "Successfully created new directory path: #{result[:data].to_json}"
+      else
+        puts "Failed to create new directory path: #{result[:data].to_json}"
       end
     end
 
