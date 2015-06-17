@@ -50,8 +50,9 @@ module CloudDrive
       account = CloudDrive::Account.new(config[:email], config[:client_id], config[:client_secret])
       result = account.authorize
       if result[:success] === false
-        if result[:data]["message"] == "Initial authorization required."
-          puts "Initiali authorization required. Navigate to the following URL and paste in the redirect URL here."
+        puts result[:data]["message"]
+        if result[:data]["auth_url"]
+          puts "Navigate to the following URL and paste in the redirect URL here."
           url = ask(result[:data]["auth_url"] + "\n")
           result = account.authorize(url)
           if result[:success]
@@ -74,21 +75,21 @@ module CloudDrive
 LONGDESC
     def sync
       setup
-      @account.authorize
+      authorize
       @account.sync
     end
 
     desc "clearcache", "Clear local nodes cache"
     def clearcache
       setup
-      @account.authorize
+      authorize
       @account.clear_cache
     end
 
     desc 'metadata REMOTE_PATH', 'Retrieve the node\'s metadata given its remote path'
     def metadata(path)
       setup
-      @account.authorize
+      authorize
       api = CloudDrive::Node.new(@account)
 
       if (node = api.find_by_path(path)) != nil
@@ -101,7 +102,7 @@ LONGDESC
     desc "mkdir REMOTE_PATH", "Create (recursively) a new remote directory"
     def mkdir(path)
       setup
-      @account.authorize
+      authorize
       node = CloudDrive::Node.new(@account)
 
       result = node.create_directory_path(path)
@@ -117,6 +118,14 @@ LONGDESC
     def setup
       config = read_config
       @account = CloudDrive::Account.new(config[:email], config[:client_id], config[:client_secret])
+    end
+
+    def authorize
+      result = @account.authorize
+      if result[:success] == false
+        puts "Failed to authorize account. Please run 'clouddrive init'."
+        exit
+      end
     end
 
     def read_config
