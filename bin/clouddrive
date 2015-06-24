@@ -8,7 +8,7 @@ module CloudDrive
 
     def initialize(*args)
       super
-      @config_path = File.expand_path('~/.clouddrive') + "/"
+      @config_path = File.expand_path('~/.cache/clouddrive') + "/"
     end
 
     desc "init", "Initialize app with Amazon e-mail and CloudDrive credentials"
@@ -110,6 +110,47 @@ LONGDESC
         puts "Successfully created new directory path: #{result[:data].to_json}"
       else
         puts "Failed to create new directory path: #{result[:data].to_json}"
+      end
+    end
+
+    desc "upload LOCAL_PATH [REMOTE_PATH]", "Upload a file or folder to the specified remote path"
+    def upload(local_path, remote_path = '')
+      setup
+      authorize
+      api = CloudDrive::Node.new(@account)
+
+      src = File.expand_path(local_path, Dir.pwd)
+      if File.directory?(src)
+        api.upload_dir(src, remote_path, true)
+      else
+        result = api.upload_file(src, remote_path)
+        if result[:success] == true
+          puts "Successfully uploaded file #{src}: #{result[:data].to_json}"
+        else
+          puts "Failed to upload file #{src}: #{result[:data].to_json}"
+        end
+      end
+    end
+
+    desc "ls [REMOTE_PATH]", "List all nodes inside of a specified remote directory"
+    def ls(path = '')
+      setup
+      authorize
+      api = CloudDrive::Node.new(@account)
+
+      node = api.find_by_path(path)
+      if node.nil?
+        puts "Remote path '#{path}' doesn't exist."
+      else
+        result = api.get_children(node["id"])
+        if result[:success] == true
+          if result[:data].kind_of?(Array)
+            result[:data].each do |node|
+              time = Time.parse(node["modifiedDate"])
+              puts "#{node["id"]} #{time.asctime} #{node["kind"]}\t#{node["name"]}"
+            end
+          end
+        end
       end
     end
 
