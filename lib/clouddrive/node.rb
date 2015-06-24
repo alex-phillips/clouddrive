@@ -196,6 +196,11 @@ module CloudDrive
     def find_by_path(path)
       path = path.gsub(/\A\//, '')
       path = path.gsub(/\/$/, '')
+
+      if path == ''
+        return get_root
+      end
+
       path_info = Pathname.new(path)
 
       found_nodes = find_by_name(path_info.basename.to_s)
@@ -211,6 +216,26 @@ module CloudDrive
       end
 
       match
+    end
+
+    # @TODO: there's probably a better way to do this locally than check the last
+    # `id` in the `parent` string is the parent...
+    def get_children(id)
+      retval = {
+        :success => true,
+        :data => []
+      }
+
+      nodes = @account.db.execute("SELECT raw_data FROM nodes WHERE parents LIKE '%#{id}';")
+      if nodes.kind_of?(Array)
+        nodes.each do |node|
+          retval[:data].push(JSON.parse(node[0]))
+        end
+      else
+        retval[:data] = JSON.parse(nodes)
+      end
+
+      retval
     end
 
     def get_path_array(path)
@@ -293,7 +318,11 @@ module CloudDrive
 
       path_info = Pathname.new(src_path)
       dest_path = get_path_string(get_path_array(dest_path))
-      dest_folder = create_directory_path(dest_path)
+
+      result = create_directory_path(dest_path)
+      return result if result[:success] == false
+
+      dest_folder = result[:data]
 
       result = exists?("#{dest_path}/#{path_info.basename}", src_path)
       if result[:success] == true

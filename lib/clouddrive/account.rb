@@ -11,11 +11,11 @@ module CloudDrive
 
     def initialize(email, client_id, client_secret)
       @email = email
-      @cache_file = File.expand_path("~/.clouddrive/#{email}.cache")
+      @cache_file = File.expand_path("~/.cache/clouddrive/#{email}.cache")
       @client_id = client_id
       @client_secret = client_secret
 
-      @db = SQLite3::Database.new(File.expand_path("~/.clouddrive/#{@email}.db"))
+      @db = SQLite3::Database.new(File.expand_path("~/.cache/clouddrive/#{@email}.db"))
       if @db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='nodes';").empty?
         @db.execute <<-SQL
          CREATE TABLE nodes(
@@ -23,6 +23,7 @@ module CloudDrive
             name VARCHAR NOT NULL,
             kind VARCHAR NOT NULL,
             md5 VARCHAR,
+            parents VARCHAR,
             created DATETIME NOT NULL,
             modified DATETIME NOT NULL,
             raw_data TEXT NOT NULL
@@ -38,8 +39,7 @@ module CloudDrive
       }
 
       @token_store = {
-          "checkpoint" => nil,
-          "nodes" => {}
+          "checkpoint" => nil
       }
 
       if File.exists?(@cache_file)
@@ -292,8 +292,8 @@ module CloudDrive
       end
 
       begin
-        result = db.execute("INSERT OR REPLACE INTO nodes (id, name, kind, md5, created, modified, raw_data)
-          VALUES (?, ?, ?, ?, ?, ?, ?);", [node["id"], node["name"], node["kind"], md5, node["createdDate"], node["modifiedDate"], node.to_json])
+        result = db.execute("INSERT OR REPLACE INTO nodes (id, name, kind, md5, parents, created, modified, raw_data)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?);", [node["id"], node["name"], node["kind"], md5, node["parents"].join(','), node["createdDate"], node["modifiedDate"], node.to_json])
       rescue SQLite3::Exception => e
         if node["name"] == nil
           puts "Exception saving node: #{e}"
