@@ -109,7 +109,9 @@ module CloudDrive
             return {
                 :success => true,
                 :data => {
-                    "message" => "File with same MD5 exists at #{path}: #{file.to_json}"
+                    "message" => "File with same MD5 exists at #{path}: #{file.to_json}",
+                    "path_match" => false,
+                    "md5_match" => true
                 }
             }
           end
@@ -125,16 +127,20 @@ module CloudDrive
       retval = {
           :success => true,
           :data => {
-              "message" => "File #{remote_file} exists"
+              "message" => "File #{remote_file} exists",
+              "path_match" => true,
+              "md5_match" => false,
+              "node" => file
           }
       }
 
       if local_file != nil
         if file["contentProperties"] != nil && file["contentProperties"]["md5"] != nil
           if Digest::MD5.file(local_file).to_s != file["contentProperties"]["md5"]
-            retval[:data]["message"] = "File #{remote_file} exists butuum doesn't match"
+            retval[:data]["message"] = "File #{remote_file} exists but checksum doesn't match"
           else
             retval[:data]["message"] = "File #{remote_file} exists and is identical"
+            retval[:data]["md5_match"] = true
           end
         else
           retval[:data]["message"] = "File #{remote_file} exists, but no checksum is available"
@@ -166,7 +172,6 @@ module CloudDrive
     end
 
     def find_by_md5(hash)
-
       results = @account.db.execute("SELECT raw_data FROM nodes WHERE md5 = ?;", hash)
       if results.empty?
         return nil
@@ -270,7 +275,7 @@ module CloudDrive
       nil
     end
 
-    def upload_dir(src_path, dest_root, show_progress = false)
+    def upload_dir(src_path, dest_root, overwrite = false, show_progress = false)
       src_path = File.expand_path(src_path)
 
       dest_root = get_path_array(dest_root)
@@ -285,7 +290,7 @@ module CloudDrive
         path_info = Pathname.new(file)
         remote_dest = path_info.dirname.sub(src_path, dest_root).to_s
 
-        result = upload_file(file, remote_dest)
+        result = upload_file(file, remote_dest, overwrite)
         if show_progress == true
           if result[:success] == true
             puts "Successfully uploaded file #{file}: #{result[:data].to_json}"
@@ -310,10 +315,10 @@ module CloudDrive
       retval
     end
 
-    def upload_file(src_path, dest_path)
+    def upload_file(src_path, dest_path, overwrite = false)
       retval = {
           :success => false,
-          :data => []
+          :data => {}
       }
 
       path_info = Pathname.new(src_path)
@@ -326,9 +331,19 @@ module CloudDrive
 
       result = exists?("#{dest_path}/#{path_info.basename}", src_path)
       if result[:success] == true
-        retval[:data] = result[:data]
+        if overwrite == false
+          retval[:data] = result[:data]
 
-        return retval
+          return retval
+        end
+
+        if result[:data]["md5_match"]
+          retval[:data]["message"] = "Identical file already exists at #{dest_path}."
+
+          return retval
+        end
+
+        return overwrite_file(src_path, result[:data]["node"])
       end
 
       body = {
@@ -345,6 +360,27 @@ module CloudDrive
       RestClient.post("#{@account.content_url}nodes", body, :Authorization => "Bearer #{@account.access_token}") do |response, request, result|
         retval[:data] = JSON.parse(response.body)
         if response.code === 201
+          retval[:success] = true
+          @account.save_node(retval[:data])
+        end
+      end
+
+      retval
+    end
+
+    def overwrite_file(src_path, node)
+      retval = {
+        :success => false,
+        :data => {}
+      }
+
+      body = {
+          :content => File.new(File.expand_path(src_path), 'rb')
+      }
+
+      RestClient.put("#{@account.content_url}nodes/#{node["id"]}/content", body, :Authorization => "Bearer #{@account.access_token}") do |response, request, result|
+        retval[:data] = JSON.parse(response.body)
+        if response.code === 200
           retval[:success] = true
           @account.save_node(retval[:data])
         end
