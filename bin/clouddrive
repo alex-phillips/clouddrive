@@ -4,6 +4,7 @@ require 'yaml'
 require 'json'
 
 module CloudDrive
+
   class CLI < Thor
 
     def initialize(*args)
@@ -23,17 +24,9 @@ module CloudDrive
 
       config = read_config
 
-      if email != nil
-        config[:email] = email
-      end
-
-      if client_id != nil
-        config[:client_id] = client_id
-      end
-
-      if client_secret != nil
-        config[:client_secret] = client_secret
-      end
+      config[:email] = email if email != nil
+      config[:client_id] = client_id if client_id != nil
+      config[:client_secret] = client_secret if client_secret != nil
 
       if config[:email] == nil
         puts "Email is required for authorization"
@@ -114,16 +107,20 @@ LONGDESC
     end
 
     desc "upload LOCAL_PATH [REMOTE_PATH]", "Upload a file or folder to the specified remote path"
+    option :overwrite, :type => :boolean, :aliases => :o
     def upload(local_path, remote_path = '')
       setup
       authorize
       api = CloudDrive::Node.new(@account)
 
+      overwrite = true
+      overwrite = false if options[:overwrite] == nil
+
       src = File.expand_path(local_path, Dir.pwd)
       if File.directory?(src)
-        api.upload_dir(src, remote_path, true)
+        api.upload_dir(src, remote_path, overwrite, true)
       else
-        result = api.upload_file(src, remote_path)
+        result = api.upload_file(src, remote_path, overwrite)
         if result[:success] == true
           puts "Successfully uploaded file #{src}: #{result[:data].to_json}"
         else
@@ -196,6 +193,7 @@ LONGDESC
     end
 
   end
+
 end
 
-CloudDrive::CLI.start( ARGV )
+CloudDrive::CLI.start(ARGV)
