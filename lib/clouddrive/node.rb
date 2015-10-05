@@ -261,7 +261,21 @@ module CloudDrive
     end
 
     def rename(new_name)
+      retval = {
+          :success => false,
+          :data => {}
+      }
 
+      RestClient.patch("#{@@account.metadata_url}nodes/#{get_id}", {:name => new_name}.to_json, :Authorization => "Bearer #{@@account.token_store[:access_token]}") do |response, request, result|
+        retval[:data] = JSON.parse(response.body)
+        if response.code === 200
+          retval[:success] = true
+          @data = retval[:data]
+          save
+        end
+      end
+
+      retval
     end
 
     def restore

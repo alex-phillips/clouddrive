@@ -19,6 +19,7 @@ module CloudDrive
     subcommand "tree", "Initialize the command line application for use with an Amazon account", TreeCommand
     subcommand "upload", "Initialize the command line application for use with an Amazon account", UploadCommand
     subcommand "mkdir", "Initialize the command line application for use with an Amazon account", MkdirCommand
+    subcommand "rename", "Rename remote node", RenameCommand
 
   end
 

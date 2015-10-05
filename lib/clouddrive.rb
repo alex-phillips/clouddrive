@@ -19,6 +19,7 @@ require "clouddrive/commands/resolve_command"
 require "clouddrive/commands/tree_command"
 require "clouddrive/commands/upload_command"
 require "clouddrive/commands/mkdir_command"
+require "clouddrive/commands/rename_command"
 
 module CloudDrive
   # Your code goes here...
