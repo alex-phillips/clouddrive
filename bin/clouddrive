@@ -7,17 +7,17 @@ module CloudDrive
 
     subcommand "config", "Read, write, and reset config options", ConfigCommand
     subcommand "init", "Initialize the command line application for use with an Amazon account", InitCommand
-    subcommand "sync", "Initialize the command line application for use with an Amazon account", SyncCommand
-    subcommand "metadata", "Initialize the command line application for use with an Amazon account", MetadataCommand
-    subcommand "find", "Initialize the command line application for use with an Amazon account", FindCommand
-    subcommand "ls", "Initialize the command line application for use with an Amazon account", ListCommand
-    subcommand "clearcache", "Initialize the command line application for use with an Amazon account", ClearCacheCommand
-    subcommand "du", "Initialize the command line application for use with an Amazon account", DiskUsageCommand
-    subcommand "pending", "Initialize the command line application for use with an Amazon account", ListPendingCommand
-    subcommand "trash", "Initialize the command line application for use with an Amazon account", ListTrashCommand
-    subcommand "resolve", "Initialize the command line application for use with an Amazon account", ResolveCommand
-    subcommand "tree", "Initialize the command line application for use with an Amazon account", TreeCommand
-    subcommand "upload", "Initialize the command line application for use with an Amazon account", UploadCommand
+    subcommand "sync", "Sync the local cache with Amazon Cloud Drive", SyncCommand
+    subcommand "metadata", "Retrieve the metadata (JSON) of a node", MetadataCommand
+    subcommand "find", "Find nodes by name or MD5 checksum", FindCommand
+    subcommand "ls", "List all remote nodes inside of a specified directory", ListCommand
+    subcommand "clearcache", "Clear the local cache", ClearCacheCommand
+    subcommand "du", "Display disk usage (recursively) for the given node", DiskUsageCommand
+    subcommand "pending", "List the nodes that have a status of 'PENDING'", ListPendingCommand
+    subcommand "trash", "List the nodes that are in trash", ListTrashCommand
+    subcommand "resolve", "Return a node's remote path by its ID", ResolveCommand
+    subcommand "tree", "Print directory tree of the given node", TreeCommand
+    subcommand "upload", "Upload local file or folder to remote directory", UploadCommand
     subcommand "mkdir", "Initialize the command line application for use with an Amazon account", MkdirCommand
     subcommand "rename", "Rename remote node", RenameCommand
     subcommand "rm", "Move remote node to trash", RemoveCommand
