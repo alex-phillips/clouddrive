@@ -454,7 +454,7 @@ module CloudDrive
       @data["status"]
     end
 
-    def self.upload_dir(src_path, dest_root, overwrite = false)
+    def self.upload_dir(src_path, dest_root, overwrite = false, callback = nil)
       src_path = File.expand_path(src_path)
 
       dest_root = Node.get_path_array(dest_root)
@@ -470,10 +470,8 @@ module CloudDrive
         remote_dest = path_info.dirname.sub(src_path, dest_root).to_s
 
         result = Node.upload_file(file, remote_dest, overwrite)
-        if result[:success] == true
-          puts "Successfully uploaded file '#{file}'"
-        else
-          puts "Failed to uploaded file '#{file}': #{result[:data]["message"]}"
+        unless callback.nil?
+          callback.call(file, remote_dest, result)
         end
 
         retval.push(result)
