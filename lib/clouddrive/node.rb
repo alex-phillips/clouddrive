@@ -55,8 +55,8 @@ module CloudDrive
         retval[:data] = data
         if response.code === 201
           retval[:success] = true
-          node = Node.new(data)
-          node.save
+          retval[:data] = Node.new(data)
+          retval[:data].save
         end
       end
 
