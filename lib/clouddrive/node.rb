@@ -279,7 +279,27 @@ module CloudDrive
     end
 
     def restore
+      retval = {
+          :success => false,
+          :data => {}
+      }
 
+      if get_status === 'AVAILABLE'
+        retval[:data]["message"] = "Node is already available"
+
+        return retval
+      end
+
+      RestClient.post("#{@@account.metadata_url}trash/#{get_id}/restore", {}, :Authorization => "Bearer #{@@account.token_store[:access_token]}") do |response, request, result|
+        retval[:data] = JSON.parse(response.body)
+        if response.code === 200
+          retval[:success] = true
+          @data = retval[:data]
+          save
+        end
+      end
+
+      retval
     end
 
     def save
@@ -295,7 +315,27 @@ module CloudDrive
     end
 
     def trash
+      retval = {
+          :success => false,
+          :data => {}
+      }
 
+      if get_status === 'TRASH'
+        retval[:data]["message"] = "Node is already in trash"
+
+        return retval
+      end
+
+      RestClient.put("#{@@account.metadata_url}trash/#{get_id}", {}.to_json, :Authorization => "Bearer #{@@account.token_store[:access_token]}") do |response, request, result|
+        retval[:data] = JSON.parse(response.body)
+        if response.code === 200
+          retval[:success] = true
+          @data = retval[:data]
+          save
+        end
+      end
+
+      retval
     end
 
 

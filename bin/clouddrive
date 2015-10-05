@@ -20,6 +20,8 @@ module CloudDrive
     subcommand "upload", "Initialize the command line application for use with an Amazon account", UploadCommand
     subcommand "mkdir", "Initialize the command line application for use with an Amazon account", MkdirCommand
     subcommand "rename", "Rename remote node", RenameCommand
+    subcommand "rm", "Move remote node to trash", RemoveCommand
+    subcommand "restore", "Restore remote node from trash", RestoreCommand
 
   end
 
