@@ -7,11 +7,11 @@ Gem::Specification.new do |spec|
   spec.name          = "clouddrive"
   spec.version       = CloudDrive::VERSION
   spec.authors       = ["Alex Phillips"]
-  spec.email         = ["exonintrendo@gmail.com"]
+  spec.email         = ["ahp118@gmail.com"]
 
-  spec.summary       = %q{CloudDrive for Ruby}
-  spec.description   = %q{Ruby SDK and command line application for Amazon's CloudDrive}
-  spec.homepage      = "https://github.com/exonintrendo/clouddrive"
+  spec.summary       = %q{Cloud Drive for Ruby}
+  spec.description   = %q{Ruby SDK and command line application for Amazon's Cloud Drive}
+  spec.homepage      = "https://github.com/alex-phillips/clouddrive"
   spec.license       = "MIT"
 
   # Prevent pushing this gem to RubyGems.org by setting 'allowed_push_host', or
@@ -31,6 +31,8 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake", "~> 10.0"
 
   spec.add_runtime_dependency "rest-client", "~> 1.8"
-  spec.add_runtime_dependency "thor", "~> 0.19"
-  spec.add_runtime_dependency "sqlite3", "~>1.3"
+  spec.add_runtime_dependency "clamp", "~> 1.0"
+  spec.add_runtime_dependency "sqlite3", "~> 1.3"
+  spec.add_runtime_dependency "colorize", "~> 0.7"
+  spec.add_runtime_dependency "sequel", "~> 4.27"
 end

@@ -7,98 +7,88 @@ module CloudDrive
 
   class Account
 
-    attr_reader :access_token, :metadata_url, :content_url, :email, :token_store, :db
+    attr_reader :cache, :access_token, :metadata_url, :content_url, :email, :token_store, :checkpoint
 
-    def initialize(email, client_id, client_secret)
+    def initialize(email, client_id, client_secret, cache)
       @email = email
-      @cache_file = File.expand_path("~/.cache/clouddrive/#{email}.cache")
+      @cache_file = File.expand_path("~/.cache/clouddrive-ruby/#{email}.cache")
       @client_id = client_id
       @client_secret = client_secret
+      @cache = cache
 
-      @db = SQLite3::Database.new(File.expand_path("~/.cache/clouddrive/#{@email}.db"))
-      if @db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='nodes';").empty?
-        @db.execute <<-SQL
-         CREATE TABLE nodes(
-            id VARCHAR PRIMARY KEY NOT NULL,
-            name VARCHAR NOT NULL,
-            kind VARCHAR NOT NULL,
-            md5 VARCHAR,
-            parents VARCHAR,
-            created DATETIME NOT NULL,
-            modified DATETIME NOT NULL,
-            raw_data TEXT NOT NULL
-         );
-        SQL
-      end
+      @redirect_uri = 'http://localhost'
+
+      @scope = [
+          'clouddrive:read_all',
+          'clouddrive:write',
+      ]
+
+      config = @cache.load_account_config(@email)
+
+      @token_store = config ? config : {}
     end
 
     def authorize(auth_url = nil)
       retval = {
-        :success => true,
-        :data => {}
+          :success => true,
+          :data => {}
       }
 
-      @token_store = {
-          "checkpoint" => nil
-      }
+      scope = URI.escape(@scope.join(' '))
 
-      if File.exists?(@cache_file)
-        @token_store = JSON.parse(File.read(@cache_file))
-      end
-
-      if !@token_store.has_key?("access_token")
+      response = {}
+      if !@token_store.has_key?(:access_token)
         if auth_url.nil?
           retval = {
             :success => false,
             :data => {
               "message" => "Initial authorization required",
-              "auth_url" => "https://www.amazon.com/ap/oa?client_id=#{@client_id}&scope=clouddrive%3Aread%20clouddrive%3Awrite&response_type=code&redirect_uri=http://localhost"
+              "auth_url" => "https://www.amazon.com/ap/oa?client_id=#{@client_id}&scope=#{scope}&response_type=code&redirect_uri=#{@redirect_uri}"
             }
           }
 
           return retval
-        else
-          data = request_authorization(auth_url)
         end
 
-        if data[:success] === true
-          @token_store = data[:data]
-        else
-          return data
-        end
+        response = request_authorization(auth_url)
 
-        save_token_store
-      elsif (Time.new.to_i - @token_store["last_authorized"]) > 60
-        data = renew_authorization
-        if data[:success] === false
-          return data
+        return response if response[:success] === false
+      elsif @token_store.has_key?(:last_authorized) && (Time.new.to_i - @token_store[:last_authorized]) > 60
+        response = renew_authorization
+        if response[:success] === false
+          return response
         end
       end
 
-      @access_token = @token_store["access_token"]
+      if response.has_key?(:data)
+        response[:data].each do |key, value|
+          @token_store[key.to_sym] = value
+        end
+      end
 
-      if !@token_store.has_key?("metadataUrl") || !@token_store.has_key?("contentUrl")
+      if !@token_store.has_key?(:metadata_url) || !@token_store.has_key?(:content_url) || !@token_store[:metadata_url] || !@token_store[:content_url]
         result = get_endpoint
         if result[:success] === true
           @metadata_url = result[:data]["metadataUrl"]
           @content_url = result[:data]["contentUrl"]
-          @token_store["contentUrl"] = @content_url
-          @token_store["metadataUrl"] = @metadata_url
-
-          save_token_store
+          @token_store[:content_url] = result[:data]["contentUrl"]
+          @token_store[:metadata_url] = result[:data]["metadataUrl"]
         end
       end
 
-      @metadata_url = @token_store["metadataUrl"]
-      @content_url = @token_store["contentUrl"]
+      @checkpoint = @token_store[:checkpoint]
+      @metadata_url = @token_store[:metadata_url]
+      @content_url = @token_store[:content_url]
+
+      save
 
       retval
     end
 
     def clear_cache
-      @token_store["nodes"] = {}
-      @token_store["checkpoint"] = nil
-      save_token_store
+      @checkpoint = nil
+      save
+      @cache.delete_all_nodes
     end
 
     def get_endpoint
@@ -106,7 +96,7 @@ module CloudDrive
           :success => false,
           :data => {}
       }
-      RestClient.get("https://cdws.us-east-1.amazonaws.com/drive/v1/account/endpoint", {:Authorization => "Bearer #{@access_token}"}) do |response, request, result|
+      RestClient.get("https://cdws.us-east-1.amazonaws.com/drive/v1/account/endpoint", {:Authorization => "Bearer #{@token_store[:access_token]}"}) do |response, request, result|
         retval[:data] = JSON.parse(response.body)
         if response.code === 200
           retval[:success] = true
@@ -122,7 +112,7 @@ module CloudDrive
           :data => {}
       }
 
-      RestClient.get("#{@metadata_url}account/quota", {:Authorization => "Bearer #{@access_token}"}) do |response, request, result|
+      RestClient.get("#{@metadata_url}account/quota", {:Authorization => "Bearer #{@token_store[:access_token]}"}) do |response, request, result|
         retval[:data] = JSON.parse(response.body)
         if response.code === 200
           retval[:success] = true
@@ -138,7 +128,7 @@ module CloudDrive
           :data => {}
       }
 
-      RestClient.get("#{@metadata_url}account/usage", {:Authorization => "Bearer #{@access_token}"}) do |response, request, result|
+      RestClient.get("#{@metadata_url}account/usage", {:Authorization => "Bearer #{@token_store[:access_token]}"}) do |response, request, result|
         retval[:data] = JSON.parse(response.body)
         if response.code === 200
           retval[:success] = true
@@ -148,8 +138,29 @@ module CloudDrive
       retval
     end
 
-    def nodes
-      @token_store["nodes"]
+    def renew_authorization
+      retval = {
+          :success => false,
+          :data => {}
+      }
+
+      body = {
+          'grant_type' => "refresh_token",
+          'refresh_token' => @token_store[:refresh_token],
+          'client_id' => @client_id,
+          'client_secret' => @client_secret,
+          'redirect_uri' => "http://localhost"
+      }
+      RestClient.post("https://api.amazon.com/auth/o2/token", body, :content_type => 'application/x-www-form-urlencoded') do |response, request, result|
+        retval[:data] = JSON.parse(response.body)
+        if response.code === 200
+          retval[:success] = true
+
+          retval[:data]["last_authorized"] = Time.new.to_i
+        end
+      end
+
+      retval
     end
 
     def request_authorization(auth_url)
@@ -189,79 +200,54 @@ module CloudDrive
       retval
     end
 
-    def renew_authorization
-      retval = {
-          :success => false,
-          :data => {}
-      }
-
-      body = {
-          'grant_type' => "refresh_token",
-          'refresh_token' => @token_store["refresh_token"],
-          'client_id' => @client_id,
-          'client_secret' => @client_secret,
-          'redirect_uri' => "http://localhost"
-      }
-      RestClient.post("https://api.amazon.com/auth/o2/token", body, :content_type => 'application/x-www-form-urlencoded') do |response, request, result|
-        retval[:data] = JSON.parse(response.body)
-        if response.code === 200
-          retval[:success] = true
-
-          @token_store["last_authorized"] = Time.new.to_i
-          @token_store["refresh_token"] = retval[:data]["refresh_token"]
-          @token_store["access_token"] = retval[:data]["access_token"]
-
-          @access_token = @token_store["access_token"]
-          @refresh_token = @token_store["refresh_token"]
-
-          save_token_store
-        end
-      end
-
-      retval
+    def save
+      @cache.save_account_config(self)
     end
 
-    def save_token_store
-      File.open(@cache_file, 'w') do |file|
-        file.write(@token_store.to_json)
-      end
+    def set_scope(scopes)
+      @scope = scopes
     end
 
     def sync
-      if !@token_store.has_key?("checkpoint")
-        @token_store["checkpoint"] = nil
-      end
-
       body = {
-          :includePurged => "true"
+          :maxNodes => 5000
       }
 
+      if @checkpoint
+        body[:includePurged] = "true"
+      end
+
       loop do
-        if @token_store["checkpoint"] != nil
-          body[:checkpoint] = @token_store["checkpoint"]
+        if @checkpoint
+          body[:checkpoint] = @checkpoint
         end
 
         loop = true
-        RestClient.post(@metadata_url + "changes", body.to_json, :Authorization => "Bearer #{@access_token}") do |response, request, result|
+        RestClient.post("#{@metadata_url}changes", body.to_json, :Authorization => "Bearer #{@token_store[:access_token]}") do |response, request, result|
           if response.code === 200
             data = response.body.split("\n")
             data.each do |xary|
               xary = JSON.parse(xary)
               if xary.has_key?("reset") && xary["reset"] == true
-                @db.execute("DELETE FROM nodes WHERE 1=1")
+                @cache.delete_all_nodes
               end
 
-              if xary.has_key?("end") && xary["end"] == true
-                loop = false
-              elsif xary.has_key?("nodes")
-                @token_store["checkpoint"] = xary["checkpoint"]
-                xary["nodes"].each do |node|
-                  if node["status"] == "PURGED"
-                    delete_node_by_id(node["id"])
-                  else
-                    save_node(node)
+              if xary.has_key?("nodes")
+                @checkpoint = xary["checkpoint"]
+                if xary["nodes"].empty?
+                  loop = false
+                else
+                  xary["nodes"].each do |node|
+                    node = Node.new(node)
+                    if node.get_status == "PURGED"
+                      node.delete
+                    else
+                      node.save
+                    end
                   end
                 end
+
+                save
               end
             end
           end
@@ -270,36 +256,7 @@ module CloudDrive
         break if loop === false
       end
 
-      save_token_store
-    end
-
-    def delete_node_by_id(id)
-      begin
-        @db.execute("DELETE FROM nodes WHERE id = ?", id)
-      rescue SQLite3::Exception => e
-        puts "Exception deleting node with ID #{id}: #{e}"
-      end
-    end
-
-    def save_node(node)
-      md5 = nil
-      if node["contentProperties"] != nil && node["contentProperties"]["md5"] != nil
-        md5 = node["contentProperties"]["md5"]
-      end
-
-      if node["name"] == nil && node["isRoot"] != nil && node["isRoot"] == true
-        node["name"] = "root"
-      end
-
-      begin
-        result = db.execute("INSERT OR REPLACE INTO nodes (id, name, kind, md5, parents, created, modified, raw_data)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?);", [node["id"], node["name"], node["kind"], md5, node["parents"].join(','), node["createdDate"], node["modifiedDate"], node.to_json])
-      rescue SQLite3::Exception => e
-        if node["name"] == nil
-          puts "Exception saving node: #{e}"
-          puts node.to_json
-        end
-      end
+      save
     end
 
   end
