@@ -389,10 +389,6 @@ module CloudDrive
       @@cache.save_node(self)
     end
 
-    def self.search_by_name(name)
-
-    end
-
     def trash
       retval = {
           :success => false,
