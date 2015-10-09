@@ -24,6 +24,8 @@ module CloudDrive
     subcommand "restore", "Restore remote node from trash", RestoreCommand
     subcommand "download", "Download remote file or folder", DownloadCommand
     subcommand "mv", "Move a node to a new remote folder", MoveCommand
+    subcommand "quota", "Display Cloud Drive account quota", QuotaCommand
+    subcommand "usage", "Display Cloud Drive account usage", UsageCommand
 
   end
 

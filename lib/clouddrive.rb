@@ -25,6 +25,8 @@ require "clouddrive/commands/remove_command"
 require "clouddrive/commands/restore_command"
 require "clouddrive/commands/download_command"
 require "clouddrive/commands/move_command"
+require "clouddrive/commands/quota_command"
+require "clouddrive/commands/usage_command"
 
 module CloudDrive
   # Your code goes here...
