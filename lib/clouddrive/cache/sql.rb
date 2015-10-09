@@ -42,7 +42,8 @@ module CloudDrive
 
     def find_nodes_by_name(name)
       retval = []
-      results = @db[:nodes].select(:raw_data).where(Sequel.ilike(:name, "%#{name}%")).all
+      # results = @db[:nodes].select(:raw_data).where(Sequel.ilike(:name, "%#{name}%")).all
+      results = @db[:nodes].select(:raw_data).where(:name => name).all
       results.each do |result|
         retval.push(Node.new(JSON.parse(result[:raw_data])))
       end
@@ -142,6 +143,16 @@ module CloudDrive
             :id_parent => id
         )
       end
+    end
+
+    def search_nodes_by_name(name)
+      retval = []
+      results = @db[:nodes].select(:raw_data).where(Sequel.ilike(:name, "%#{name}%")).all
+      results.each do |result|
+        retval.push(Node.new(JSON.parse(result[:raw_data])))
+      end
+
+      retval
     end
 
   end

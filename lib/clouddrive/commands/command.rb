@@ -7,49 +7,53 @@ module CloudDrive
 
     def read_config
       @default_config = {
-          'email'             => {
-              'type'    => 'string',
+          'email' => {
+              'type' => 'string',
               'default' => '',
           },
-          'client-id'         => {
-              'type'    => 'string',
+          'client-id' => {
+              'type' => 'string',
               'default' => '',
           },
-          'client-secret'     => {
-              'type'    => 'string',
+          'client-secret' => {
+              'type' => 'string',
               'default' => '',
           },
-          'json.pretty'       => {
-              'type'    => 'bool',
+          'json.pretty' => {
+              'type' => 'bool',
               'default' => false,
           },
           'upload.duplicates' => {
-              'type'    => 'bool',
+              'type' => 'bool',
               'default' => false,
           },
-          'database.driver'   => {
-              'type'    => 'string',
+          'database.driver' => {
+              'type' => 'string',
               'default' => 'sqlite',
           },
           'database.database' => {
-              'type'    => 'string',
+              'type' => 'string',
               'default' => 'clouddrive_ruby',
           },
-          'database.host'     => {
-              'type'    => 'string',
+          'database.host' => {
+              'type' => 'string',
               'default' => '127.0.0.1',
           },
           'database.username' => {
-              'type'    => 'string',
+              'type' => 'string',
               'default' => 'root',
           },
           'database.password' => {
-              'type'    => 'string',
+              'type' => 'string',
               'default' => '',
           },
-          'display.trash'     => {
-              'type'    => 'bool',
-              'default' => false,
+          'show.trash' => {
+              'type' => 'bool',
+              'default' => true,
+          },
+          'show.pending' => {
+              'type' => 'bool',
+              'default' => true,
           },
       }
 
@@ -77,6 +81,19 @@ module CloudDrive
       }.each_pair { |e, s| return "#{(bytes.to_f / (s / 1024)).round(decimals)}#{e}" if bytes < s }
     end
 
+    def generate_cache
+      case @config["database.driver"]
+        when "sqlite"
+          cache = Sqlite.new(@config["email"], @cache_path)
+        when "mysql"
+          cache = Mysql.new(@config["database.host"], @config["database.database"], @config["database.username"], @config["database.password"])
+        else
+          raise "Invalid database driver"
+      end
+
+      cache
+    end
+
     def get_config_path
       File.expand_path("#{@cache_path}/config.json");
     end
@@ -88,32 +105,38 @@ module CloudDrive
     def init
       read_config
 
-      case @config["database.driver"]
-        when "sqlite"
-          cache = Sqlite.new(@config["email"], @cache_path)
-        # when "mysql"
-        else
-          raise "Invalid database driver"
-      end
+      cache = generate_cache
 
       @account = Account.new(@config["email"], @config["client-id"], @config["client-secret"], cache)
       Node.init(@account, cache)
       if @offline === false
         response = @account.authorize
-        if !response[:success]
+        unless response[:success]
           error("Failed to authorize account. Use `init` command for initial authorization.")
           exit
         end
       end
     end
 
-    def list_nodes(nodes)
+    def list_nodes(nodes, sort_by = 'name', show_trash = true, show_pending = true)
+      nodes.sort! { |a,b| a.get_name.downcase <=> b.get_name.downcase }
+
       nodes.each do |node|
         modified = Time.parse(node.data["modifiedDate"])
         if modified.year === Time.new().year
           modified = modified.strftime("%b %d %H:%M")
         else
           modified = modified.strftime("%b %d  %Y")
+        end
+
+        if node.in_trash
+          unless show_trash
+            next
+          end
+        elsif node.is_pending
+          unless show_pending
+            next
+          end
         end
 
         name = node.get_name
@@ -145,7 +168,11 @@ module CloudDrive
     def set_config_value(key, val)
       case @default_config[key]['type']
         when 'bool'
-          val = val == 'true' ? true : false
+          if val.to_s.downcase == 'true' || val == true || val == 1
+            val = true
+          else
+            val = false
+          end
         else
           val = val
       end

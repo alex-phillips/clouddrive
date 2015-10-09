@@ -9,8 +9,9 @@ module CloudDrive
 
       init
       node = Node.load_by_id(id)
-      if !node
+      unless node
         error("No node exists with ID '#{id}'")
+        exit
       end
 
       puts node.get_path

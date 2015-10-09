@@ -10,13 +10,13 @@ module CloudDrive
 
       if id?
         node = Node.load_by_id(path)
-        if !node
+        unless node
           error("No node exists with ID '#{path}'")
           exit
         end
       else
         node = Node.load_by_path(path)
-        if !node
+        unless node
           error("No node exists at path '#{path}'")
           exit
         end

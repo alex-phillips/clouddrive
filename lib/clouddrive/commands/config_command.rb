@@ -10,10 +10,9 @@ module CloudDrive
     def execute
       read_config
       if option
-        if !@config.has_key?(option)
+        unless @config.has_key?(option)
           error("Invalid option '#{option}'")
-
-          return
+          exit
         end
 
         if value

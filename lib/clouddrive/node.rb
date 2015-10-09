@@ -30,7 +30,7 @@ module CloudDrive
 
     def self.create_new_folder(name, parent_id = nil)
       if parent_id == nil
-        parent_id = get_root['id']
+        parent_id = get_root.get_id
       end
 
       body = {
@@ -100,16 +100,66 @@ module CloudDrive
       @@cache.delete_node_by_id(get_id)
     end
 
-    def download
+    def download(dest_folder)
+      if is_folder
+        return download_folder(dest_folder)
+      end
 
+      return download_file(dest_folder)
     end
 
     def download_file(dest)
+      retval = {
+          :success => false,
+          :Data => {}
+      }
 
+      dest = File.expand_path(dest)
+      if File.exists?(dest)
+        if File.directory?(dest)
+          dest = "#{dest}/#{get_name}"
+        else
+          retval[:data]["message"] = "File already exists at '#{dest}'"
+
+          return retval
+        end
+      end
+
+      RestClient.get("#{@@account.content_url}nodes/#{get_id}/content", :Authorization => "Bearer #{@@account.token_store[:access_token]}") do |response, request, result|
+        if response.code === 200
+          retval[:success] = true
+          File.open(dest, 'w') do |file|
+            file.write(response.body)
+          end
+        else
+          retval[:data] = JSON.parse(response.body)
+        end
+      end
+
+      retval
     end
 
     def download_folder(dest)
+      retval = {
+          :success => true,
+          :data => {}
+      }
 
+      dest = File.expand_path(dest) + "/#{get_name}"
+      unless File.exists?(dest)
+        FileUtils.mkdir(dest)
+      end
+
+      nodes = get_children
+      nodes.each do |node|
+        if node.is_file
+          node.download("#{dest}/#{node.get_name}")
+        elsif node.is_folder
+          node.download(dest)
+        end
+      end
+
+      retval
     end
 
     def filter(filters)
@@ -179,6 +229,10 @@ module CloudDrive
       @data['kind'] === 'FOLDER'
     end
 
+    def is_pending
+      @data['status'] === 'PENDING'
+    end
+
     def is_root
       return false if !@data.has_key?('isRoot')
 
@@ -212,18 +266,16 @@ module CloudDrive
       path_info = Pathname.new(path)
 
       found_nodes = self.load_by_name(path_info.basename.to_s)
-      if found_nodes.empty?
-        return nil
-      end
 
-      match = nil
+      return nil if found_nodes.empty?
+
       found_nodes.each do |node|
         if node.get_path == path
-          match = node
+          return node
         end
       end
 
-      match
+      nil
     end
 
     def self.load_by_status(status)
@@ -235,7 +287,34 @@ module CloudDrive
     end
 
     def move(new_parent)
+      unless new_parent.is_folder
+        raise "New parent node is not a folder"
+      end
 
+      unless new_parent.is_file || new_parent.is_folder
+        raise "Moving a node can only be performed on FILE and FOLDER kinds"
+      end
+
+      retval = {
+          :success => false,
+          :data => {}
+      }
+
+      body = {
+          :fromParent => get_parent_ids[0],
+          :childId => get_id
+      }
+
+      RestClient.post("#{@@account.metadata_url}nodes/#{new_parent.get_id}/children", body.to_json, :Authorization => "Bearer #{@@account.token_store[:access_token]}") do |response, request, result|
+        retval[:data] = JSON.parse(response.body)
+        if response.code === 200
+          retval[:success] = true
+          @data = retval[:data]
+          save
+        end
+      end
+
+      retval
     end
 
     def overwrite(local_path)
@@ -338,13 +417,11 @@ module CloudDrive
       retval
     end
 
-
-    # If given a local file, the MD5 will be compared as well
     def self.exists?(remote_file, local_file = nil)
       if (file = Node.load_by_path(remote_file)) == nil
         if local_file != nil
           files = Node.load_by_md5(Digest::MD5.file(local_file).to_s)
-          if !files.empty?
+          unless files.empty?
             ids = []
             files.each do |file|
               ids.push(file.get_id)
@@ -355,7 +432,8 @@ module CloudDrive
                 :data => {
                     "message" => "File(s) exist with same MD5: #{ids.join(', ')}",
                     "path_match" => false,
-                    "md5_match" => true
+                    "md5_match" => true,
+                    "ids" => ids,
                 }
             }
           end
@@ -407,6 +485,10 @@ module CloudDrive
     end
 
     def self.get_path_array(path)
+      if path.nil?
+        path = '/'
+      end
+
       return path if path.kind_of?(Array)
 
       path = path.split('/')
@@ -424,7 +506,7 @@ module CloudDrive
     end
 
     def self.get_root
-      results = load_by_name('Cloud Drive')
+      results = Node.load_by_name('Cloud Drive')
 
       if results.empty?
         raise "No node by the name of 'root' found in database"
@@ -454,6 +536,10 @@ module CloudDrive
       @data["status"]
     end
 
+    def self.search_by_name(name)
+      @@cache.search_nodes_by_name(name)
+    end
+
     def self.upload_dir(src_path, dest_root, overwrite = false, callback = nil)
       src_path = File.expand_path(src_path)
 
@@ -470,6 +556,16 @@ module CloudDrive
         remote_dest = path_info.dirname.sub(src_path, dest_root).to_s
 
         result = Node.upload_file(file, remote_dest, overwrite)
+
+        unless result[:success]
+          if result[:status_code] === 401
+            re_authorize = @@account.authorize
+            unless re_authorize[:success]
+              raise "Token expired. Failed to renew authorization."
+            end
+          end
+        end
+
         unless callback.nil?
           callback.call(file, remote_dest, result)
         end
@@ -493,36 +589,50 @@ module CloudDrive
     def self.upload_file(src_path, dest_path, overwrite = false)
       retval = {
           :success => false,
-          :data => {}
+          :data => {},
+          :status_code => nil
       }
 
       path_info = Pathname.new(src_path)
       dest_path = Node.get_path_string(Node.get_path_array(dest_path))
 
       dest_folder = Node.load_by_path(dest_path)
-      if !dest_folder
+      if dest_folder.nil?
         result = create_directory_path(dest_path)
 
-        return result if result[:success] == false
+        return result unless result[:success]
 
         dest_folder = result[:data]
       end
 
       result = Node.exists?("#{dest_path}/#{path_info.basename}", src_path)
-      if result[:success] == true
-        if overwrite == false
+      if result[:success]
+        path_match = result[:data]["path_match"]
+        md5_match = result[:data]["md5_match"]
+        if md5_match && path_match
+          # Skip if path and MD5 match
           retval[:data] = result[:data]
 
           return retval
         end
 
-        if result[:data]["md5_match"]
-          retval[:data]["message"] = "Identical file already exists at #{dest_path}."
+        if path_match && !md5_match
+          if overwrite
+            return result[:data]["node"].overwrite(src_path)
+          end
+
+          retval[:data] = result[:data]
 
           return retval
         end
 
-        return overwrite_file(src_path, result[:data]["node"])
+        if !path_match && md5_match
+          # If path doesn't match but MD5 does, check if we allow deduping
+          # @TODO: finish this!
+          retval[:data] = result[:data]
+
+          return retval
+        end
       end
 
       body = {
@@ -538,6 +648,7 @@ module CloudDrive
 
       RestClient.post("#{@@account.content_url}nodes", body, :Authorization => "Bearer #{@@account.token_store[:access_token]}") do |response, request, result|
         retval[:data] = JSON.parse(response.body)
+        retval[:status_code] = response.code
         if response.code === 201
           retval[:success] = true
           Node.new(retval[:data]).save

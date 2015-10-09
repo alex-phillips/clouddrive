@@ -4,6 +4,7 @@ require "clouddrive/node"
 require "clouddrive/cache"
 require "clouddrive/cache/sql"
 require "clouddrive/cache/sqlite"
+require "clouddrive/cache/mysql"
 require "clouddrive/commands/command"
 require "clouddrive/commands/config_command"
 require "clouddrive/commands/init_command"
@@ -22,6 +23,8 @@ require "clouddrive/commands/mkdir_command"
 require "clouddrive/commands/rename_command"
 require "clouddrive/commands/remove_command"
 require "clouddrive/commands/restore_command"
+require "clouddrive/commands/download_command"
+require "clouddrive/commands/move_command"
 
 module CloudDrive
   # Your code goes here...

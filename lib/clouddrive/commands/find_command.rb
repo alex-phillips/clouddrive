@@ -6,8 +6,7 @@ module CloudDrive
 
     def execute
       init
-      results = Node.load_by_name(name)
-
+      results = Node.search_by_name(name)
       list_nodes(results)
     end
 

@@ -18,10 +18,12 @@ module CloudDrive
     subcommand "resolve", "Return a node's remote path by its ID", ResolveCommand
     subcommand "tree", "Print directory tree of the given node", TreeCommand
     subcommand "upload", "Upload local file or folder to remote directory", UploadCommand
-    subcommand "mkdir", "Initialize the command line application for use with an Amazon account", MkdirCommand
+    subcommand "mkdir", "Recursively create remote directory path", MkdirCommand
     subcommand "rename", "Rename remote node", RenameCommand
     subcommand "rm", "Move remote node to trash", RemoveCommand
     subcommand "restore", "Restore remote node from trash", RestoreCommand
+    subcommand "download", "Download remote file or folder", DownloadCommand
+    subcommand "mv", "Move a node to a new remote folder", MoveCommand
 
   end
 
