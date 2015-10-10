@@ -5,26 +5,26 @@ module CloudDrive
 
   class Main < Clamp::Command
 
-    subcommand "config", "Read, write, and reset config options", ConfigCommand
-    subcommand "init", "Initialize the command line application for use with an Amazon account", InitCommand
-    subcommand "sync", "Sync the local cache with Amazon Cloud Drive", SyncCommand
-    subcommand "metadata", "Retrieve the metadata (JSON) of a node", MetadataCommand
-    subcommand "find", "Find nodes by name or MD5 checksum", FindCommand
-    subcommand "ls", "List all remote nodes inside of a specified directory", ListCommand
     subcommand "clearcache", "Clear the local cache", ClearCacheCommand
+    subcommand "config", "Read, write, and reset config options", ConfigCommand
+    subcommand "download", "Download remote file or folder", DownloadCommand
     subcommand "du", "Display disk usage (recursively) for the given node", DiskUsageCommand
+    subcommand "find", "Find nodes by name or MD5 checksum", FindCommand
+    subcommand "init", "Initialize the command line application for use with an Amazon account", InitCommand
+    subcommand "ls", "List all remote nodes inside of a specified directory", ListCommand
+    subcommand "metadata", "Retrieve the metadata (JSON) of a node", MetadataCommand
+    subcommand "mkdir", "Recursively create remote directory path", MkdirCommand
+    subcommand "mv", "Move a node to a new remote folder", MoveCommand
     subcommand "pending", "List the nodes that have a status of 'PENDING'", ListPendingCommand
-    subcommand "trash", "List the nodes that are in trash", ListTrashCommand
+    subcommand "quota", "Display Cloud Drive account quota", QuotaCommand
+    subcommand "rename", "Rename remote node", RenameCommand
     subcommand "resolve", "Return a node's remote path by its ID", ResolveCommand
+    subcommand "restore", "Restore remote node from trash", RestoreCommand
+    subcommand "rm", "Move remote node to trash", RemoveCommand
+    subcommand "sync", "Sync the local cache with Amazon Cloud Drive", SyncCommand
+    subcommand "trash", "List the nodes that are in trash", ListTrashCommand
     subcommand "tree", "Print directory tree of the given node", TreeCommand
     subcommand "upload", "Upload local file or folder to remote directory", UploadCommand
-    subcommand "mkdir", "Recursively create remote directory path", MkdirCommand
-    subcommand "rename", "Rename remote node", RenameCommand
-    subcommand "rm", "Move remote node to trash", RemoveCommand
-    subcommand "restore", "Restore remote node from trash", RestoreCommand
-    subcommand "download", "Download remote file or folder", DownloadCommand
-    subcommand "mv", "Move a node to a new remote folder", MoveCommand
-    subcommand "quota", "Display Cloud Drive account quota", QuotaCommand
     subcommand "usage", "Display Cloud Drive account usage", UsageCommand
 
   end
