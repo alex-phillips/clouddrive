@@ -1,6 +1,6 @@
 # CloudDrive SDK and CLI
 
-This i a Ruby project built to interact with Amazon's CloudDrive API. It works as both an SDK and a CLI in the sense that I've built the code to easily be implemented in your own projects but it also includes an executable to run many common processes right from the command line.
+This is a Ruby project built to interact with Amazon's CloudDrive API. It works as both an SDK and a CLI in the sense that I've built the code to easily be implemented in your own projects but it also includes an executable to run many common processes right from the command line.
 
 ## Obtaining Credentials
 
