@@ -66,12 +66,12 @@ module CloudDrive
         end
       else
         error "Config file not found at #{@cache_path}, exiting..."
-        exit
       end
     end
 
     def error(message)
       $stderr.puts "#{message}".colorize(:color => :white, :background => :red)
+      exit
     end
 
     def format_filesize(bytes, decimals = 2)

@@ -12,13 +12,11 @@ module CloudDrive
       node = Node.load_by_path(node_path)
       unless node
         error("No node found at path '#{node_path}'")
-        exit
       end
 
       new_parent = Node.load_by_path(new_path)
       unless new_parent
         error("No node found at path '#{new_path}'")
-        exit
       end
 
       result = node.move(new_parent)

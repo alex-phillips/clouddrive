@@ -16,7 +16,6 @@ module CloudDrive
       source = File.expand_path(local_path)
       unless File.exist?(source)
         error("No file or folder exists at '#{source}'")
-        exit
       end
 
       if overwrite?
