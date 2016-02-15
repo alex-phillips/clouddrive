@@ -65,7 +65,7 @@ module CloudDrive
           set_config(JSON.parse(data))
         end
       else
-        error "Config file not found at #{@cache_path}, exiting..."
+        error "Config file not found at #{get_config_path}, exiting..."
       end
     end
 
