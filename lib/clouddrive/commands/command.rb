@@ -64,6 +64,9 @@ module CloudDrive
         if data != ''
           set_config(JSON.parse(data))
         end
+      else
+        error "Config file not found at #{@cache_path}, exiting..."
+        exit
       end
     end
 
@@ -113,7 +116,6 @@ module CloudDrive
         response = @account.authorize
         unless response[:success]
           error("Failed to authorize account. Use `init` command for initial authorization.")
-          exit
         end
       end
     end

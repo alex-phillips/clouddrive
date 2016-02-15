@@ -18,6 +18,7 @@ describe CloudDrive::Command do
     context 'when the config file does not exist' do
       it do
         expect(File).to receive(:exist?).with(config_file_location).and_return false
+        expect(command).to receive(:error)
 
         read_config
 
