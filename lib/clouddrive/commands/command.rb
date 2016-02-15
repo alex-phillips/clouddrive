@@ -71,7 +71,7 @@ module CloudDrive
 
     def error(message)
       $stderr.puts "#{message}".colorize(:color => :white, :background => :red)
-      exit
+      exit false
     end
 
     def format_filesize(bytes, decimals = 2)
