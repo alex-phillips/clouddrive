@@ -59,7 +59,7 @@ module CloudDrive
 
       @config = {}
       @cache_path = File.expand_path("~/.cache/clouddrive-ruby")
-      if File.exists?(get_config_path)
+      if File.exist?(get_config_path)
         data = File.read(get_config_path)
         if data != ''
           set_config(JSON.parse(data))

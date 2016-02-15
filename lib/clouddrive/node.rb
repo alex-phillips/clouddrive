@@ -115,7 +115,7 @@ module CloudDrive
       }
 
       dest = File.expand_path(dest)
-      if File.exists?(dest)
+      if File.exist?(dest)
         if File.directory?(dest)
           dest = "#{dest}/#{get_name}"
         else
@@ -146,7 +146,7 @@ module CloudDrive
       }
 
       dest = File.expand_path(dest) + "/#{get_name}"
-      unless File.exists?(dest)
+      unless File.exist?(dest)
         FileUtils.mkdir(dest)
       end
 
