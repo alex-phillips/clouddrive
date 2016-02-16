@@ -536,7 +536,7 @@ module CloudDrive
       @@cache.search_nodes_by_name(name)
     end
 
-    def self.upload_dir(src_path, dest_root, overwrite = false, callback = nil)
+    def self.upload_dir(src_path, dest_root, callback = nil, options = {})
       src_path = File.expand_path(src_path)
 
       dest_root = Node.get_path_array(dest_root)
@@ -551,7 +551,7 @@ module CloudDrive
         path_info = Pathname.new(file)
         remote_dest = path_info.dirname.sub(src_path, dest_root).to_s
 
-        result = Node.upload_file(file, remote_dest, :overwrite => overwrite)
+        result = Node.upload_file(file, remote_dest, options)
 
         unless result[:success]
           if result[:status_code] === 401

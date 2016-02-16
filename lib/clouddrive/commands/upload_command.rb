@@ -26,7 +26,7 @@ module CloudDrive
       end
 
       if File.directory?(source)
-        Node.upload_dir(source, remote_path, overwrite, method(:display_file_results))
+        Node.upload_dir(source, remote_path, method(:display_file_results), :overwrite => overwrite)
       else
         result = Node.upload_file(source, remote_path, :overwrite => overwrite)
         display_file_results(source, remote_path, result)

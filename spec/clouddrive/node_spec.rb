@@ -11,7 +11,7 @@ describe CloudDrive::Node do
       after { CloudDrive::Node.class_variable_set :@@account, nil }
       it do
         expect(Find).to receive(:find).and_yield src_file_path
-        expect(CloudDrive::Node).to receive(:upload_file).with(src_file_path, "#{dest_path}/srcpath", :overwrite => false).and_return(
+        expect(CloudDrive::Node).to receive(:upload_file).with(src_file_path, "#{dest_path}/srcpath", {}).and_return(
           :success => true
         )
         expect(CloudDrive::Node.upload_dir(src_path, dest_path)).to eq [:success => true]
@@ -26,7 +26,7 @@ describe CloudDrive::Node do
         expect(CloudDrive::Node).to receive(:upload_file).with(src_file_path, "#{dest_path}/srcpath", :overwrite => true).and_return(
           :success => true
         )
-        expect(CloudDrive::Node.upload_dir(src_path, dest_path, true)).to eq [:success => true]
+        expect(CloudDrive::Node.upload_dir(src_path, dest_path, nil, :overwrite => true)).to eq [:success => true]
       end
     end
   end
