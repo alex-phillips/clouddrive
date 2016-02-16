@@ -624,9 +624,7 @@ module CloudDrive
           return retval
         end
 
-        if !path_match && md5_match
-          # If path doesn't match but MD5 does, check if we allow deduping
-          # @TODO: finish this!
+        if !path_match && md5_match && !options[:allow_duplicates]
           retval[:data] = result[:data]
 
           return retval
