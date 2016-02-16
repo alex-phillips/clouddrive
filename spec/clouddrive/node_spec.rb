@@ -26,6 +26,23 @@ describe CloudDrive::Node do
       end
     end
 
+    context 'when MD5 and Path do not match and the upload is not successful' do
+      let(:exists_return) { {} }
+      before { CloudDrive::Node.class_variable_set :@@account, double(CloudDrive::Account, :content_url => 'content url', :token_store => {}) }
+      after { CloudDrive::Node.class_variable_set :@@account, nil }
+      it do
+        expect(File).to receive(:new).with(src_path, 'rb').and_return double(File)
+        expect(RestClient).to receive(:post).and_yield double(RestClient::Response, :body => '{}', :code => 500)
+        expect(CloudDrive::Node).not_to receive :new
+
+        expect(CloudDrive::Node.upload_file(src_path, dest_path)).to eq({
+          :success => false,
+          :data => {},
+          :status_code => 500
+        })
+      end
+    end
+
     context 'when MD5 matches and Path does not match' do
       let(:exists_return) do
         {
