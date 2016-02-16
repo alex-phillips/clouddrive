@@ -6,7 +6,7 @@ describe CloudDrive::Node do
     let(:src_path) { '/root/srcpath' }
     let(:src_file_path) { "#{src_path}/#{filename}" }
     let(:dest_path) { 'dest/path' }
-    context 'without passing overwrite argument' do
+    context 'without passing options' do
       before { CloudDrive::Node.class_variable_set :@@account, double(CloudDrive::Account, :token_store => { :last_authorized => Time.new.to_i + 1000 }) }
       after { CloudDrive::Node.class_variable_set :@@account, nil }
       it do
@@ -18,15 +18,15 @@ describe CloudDrive::Node do
       end
     end
 
-    context 'with overwrite argument == true' do
+    context 'with passing options' do
       before { CloudDrive::Node.class_variable_set :@@account, double(CloudDrive::Account, :token_store => { :last_authorized => Time.new.to_i + 1000 }) }
       after { CloudDrive::Node.class_variable_set :@@account, nil }
       it do
         expect(Find).to receive(:find).and_yield src_file_path
-        expect(CloudDrive::Node).to receive(:upload_file).with(src_file_path, "#{dest_path}/srcpath", :overwrite => true).and_return(
+        expect(CloudDrive::Node).to receive(:upload_file).with(src_file_path, "#{dest_path}/srcpath", :overwrite => true, :allow_duplicates => true).and_return(
           :success => true
         )
-        expect(CloudDrive::Node.upload_dir(src_path, dest_path, nil, :overwrite => true)).to eq [:success => true]
+        expect(CloudDrive::Node.upload_dir(src_path, dest_path, nil, :overwrite => true, :allow_duplicates => true)).to eq [:success => true]
       end
     end
   end
