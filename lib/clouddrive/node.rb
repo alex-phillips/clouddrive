@@ -551,7 +551,9 @@ module CloudDrive
         path_info = Pathname.new(file)
         remote_dest = path_info.dirname.sub(src_path, dest_root).to_s
 
-        result = Node.upload_file(file, remote_dest, overwrite)
+        result = Node.upload_file(file, remote_dest, {
+          :overwrite => overwrite
+        })
 
         unless result[:success]
           if result[:status_code] === 401
@@ -582,7 +584,7 @@ module CloudDrive
       retval
     end
 
-    def self.upload_file(src_path, dest_path, overwrite = false)
+    def self.upload_file(src_path, dest_path, options = {})
       retval = {
           :success => false,
           :data => {},
@@ -613,7 +615,7 @@ module CloudDrive
         end
 
         if path_match && !md5_match
-          if overwrite
+          if options[:overwrite]
             return result[:data]["node"].overwrite(src_path)
           end
 

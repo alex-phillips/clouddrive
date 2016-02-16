@@ -71,7 +71,7 @@ describe CloudDrive::Node do
       end
     end
 
-    context 'when MD5 does not match and Path matches and overwrite == true' do
+    context 'when MD5 does not match and Path matches and options[:overwrite] == true' do
       let(:node_double) { double(CloudDrive::Node) }
       let(:exists_return) do
         {
@@ -91,7 +91,9 @@ describe CloudDrive::Node do
         expect(File).not_to receive :new
         expect(RestClient).not_to receive :post
 
-        expect(CloudDrive::Node.upload_file(src_path, dest_path, true)).to eq({})
+        expect(CloudDrive::Node.upload_file(src_path, dest_path, {
+          :overwrite => true
+        })).to eq({})
       end
     end
   end
