@@ -124,9 +124,7 @@ describe CloudDrive::Node do
         expect(File).not_to receive :new
         expect(RestClient).not_to receive :post
 
-        expect(CloudDrive::Node.upload_file(src_path, dest_path, {
-          :overwrite => true
-        })).to eq({})
+        expect(CloudDrive::Node.upload_file(src_path, dest_path, :overwrite => true)).to eq({})
       end
     end
   end

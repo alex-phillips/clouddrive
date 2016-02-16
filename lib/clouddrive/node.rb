@@ -551,9 +551,7 @@ module CloudDrive
         path_info = Pathname.new(file)
         remote_dest = path_info.dirname.sub(src_path, dest_root).to_s
 
-        result = Node.upload_file(file, remote_dest, {
-          :overwrite => overwrite
-        })
+        result = Node.upload_file(file, remote_dest, :overwrite => overwrite)
 
         unless result[:success]
           if result[:status_code] === 401
