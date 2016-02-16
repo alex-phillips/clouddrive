@@ -36,11 +36,11 @@ describe CloudDrive::Node do
         expect(RestClient).to receive(:post).and_yield double(RestClient::Response, :body => '{}', :code => 201)
         expect(CloudDrive::Node).to receive(:new).with({}).and_return(double(CloudDrive::Node, :save => nil))
 
-        expect(CloudDrive::Node.upload_file(src_path, dest_path)).to eq({
+        expect(CloudDrive::Node.upload_file(src_path, dest_path)).to eq(
           :success => true,
           :data => {},
           :status_code => 201
-        })
+        )
       end
     end
 
@@ -53,11 +53,11 @@ describe CloudDrive::Node do
         expect(RestClient).to receive(:post).and_yield double(RestClient::Response, :body => '{}', :code => 500)
         expect(CloudDrive::Node).not_to receive :new
 
-        expect(CloudDrive::Node.upload_file(src_path, dest_path)).to eq({
+        expect(CloudDrive::Node.upload_file(src_path, dest_path)).to eq(
           :success => false,
           :data => {},
           :status_code => 500
-        })
+        )
       end
     end
 
@@ -78,11 +78,11 @@ describe CloudDrive::Node do
         expect(File).not_to receive :new
         expect(RestClient).not_to receive :post
 
-        expect(CloudDrive::Node.upload_file(src_path, dest_path)).to eq({
+        expect(CloudDrive::Node.upload_file(src_path, dest_path)).to eq(
           :success => false,
           :data => success_data,
           :status_code => nil
-        })
+        )
       end
     end
 
@@ -106,11 +106,11 @@ describe CloudDrive::Node do
         expect(RestClient).to receive(:post).and_yield double(RestClient::Response, :body => '{}', :code => 201)
         expect(CloudDrive::Node).to receive(:new).with({}).and_return(double(CloudDrive::Node, :save => nil))
 
-        expect(CloudDrive::Node.upload_file(src_path, dest_path, :allow_duplicates => true)).to eq({
+        expect(CloudDrive::Node.upload_file(src_path, dest_path, :allow_duplicates => true)).to eq(
           :success => true,
           :data => {},
           :status_code => 201
-        })
+        )
       end
     end
 
@@ -131,11 +131,11 @@ describe CloudDrive::Node do
         expect(File).not_to receive :new
         expect(RestClient).not_to receive :post
 
-        expect(CloudDrive::Node.upload_file(src_path, dest_path)).to eq({
+        expect(CloudDrive::Node.upload_file(src_path, dest_path)).to eq(
           :success => false,
           :data => success_data,
           :status_code => nil
-        })
+        )
       end
     end
 
