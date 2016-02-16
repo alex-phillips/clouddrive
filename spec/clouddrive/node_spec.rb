@@ -15,9 +15,14 @@ describe CloudDrive::Node do
       after { CloudDrive::Node.class_variable_set :@@account, nil }
       it do
         expect(File).to receive(:new).with(src_path, 'rb').and_return double(File)
-        expect(RestClient).to receive :post
+        expect(RestClient).to receive(:post).and_yield double(RestClient::Response, :body => '{}', :code => 201)
+        expect(CloudDrive::Node).to receive(:new).with({}).and_return(double(CloudDrive::Node, :save => nil))
 
-        CloudDrive::Node.upload_file src_path, dest_path
+        expect(CloudDrive::Node.upload_file(src_path, dest_path)).to eq({
+          :success => true,
+          :data => {},
+          :status_code => 201
+        })
       end
     end
 
@@ -63,10 +68,13 @@ describe CloudDrive::Node do
       after { CloudDrive::Node.class_variable_set :@@account, nil }
       it do
         expect(File).to receive(:new).with(src_path, 'rb').and_return double(File)
-        expect(RestClient).to receive :post
+        expect(RestClient).to receive(:post).and_yield double(RestClient::Response, :body => '{}', :code => 201)
+        expect(CloudDrive::Node).to receive(:new).with({}).and_return(double(CloudDrive::Node, :save => nil))
 
-        CloudDrive::Node.upload_file(src_path, dest_path, {
-          :allow_duplicates => true
+        expect(CloudDrive::Node.upload_file(src_path, dest_path, :allow_duplicates => true)).to eq({
+          :success => true,
+          :data => {},
+          :status_code => 201
         })
       end
     end
