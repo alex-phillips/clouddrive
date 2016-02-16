@@ -1,6 +1,24 @@
 require 'spec_helper'
 
 describe CloudDrive::Node do
+  describe '.upload_dir' do
+    let(:filename) { 'filename' }
+    let(:src_path) { '/root/srcpath' }
+    let(:src_file_path) { "#{src_path}/#{filename}" }
+    let(:dest_path) { 'dest/path' }
+    context 'happy path' do
+      before { CloudDrive::Node.class_variable_set :@@account, double(CloudDrive::Account, :token_store => { :last_authorized => Time.new.to_i + 1000 }) }
+      after { CloudDrive::Node.class_variable_set :@@account, nil }
+      it do
+        expect(Find).to receive(:find).and_yield src_file_path
+        expect(CloudDrive::Node).to receive(:upload_file).with(src_file_path, "#{dest_path}/srcpath", :overwrite => false).and_return(
+          :success => true
+        )
+        expect(CloudDrive::Node.upload_dir(src_path, dest_path)).to eq [:success => true]
+      end
+    end
+  end
+
   describe '.upload_file' do
     let(:filename) { 'filename' }
     let(:src_path) { "/src/path/to/#{filename}" }
