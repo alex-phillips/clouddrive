@@ -25,10 +25,11 @@ module CloudDrive
         overwrite = false
       end
 
+      options = { :overwrite => overwrite, :allow_duplicates => @config['upload.duplicates'] }
       if File.directory?(source)
-        Node.upload_dir(source, remote_path, method(:display_file_results), :overwrite => overwrite)
+        Node.upload_dir(source, remote_path, method(:display_file_results), options)
       else
-        result = Node.upload_file(source, remote_path, :overwrite => overwrite)
+        result = Node.upload_file(source, remote_path, options)
         display_file_results(source, remote_path, result)
       end
     end
