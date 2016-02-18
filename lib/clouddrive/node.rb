@@ -608,6 +608,7 @@ module CloudDrive
         if md5_match && path_match
           # Skip if path and MD5 match
           retval[:data] = result[:data]
+          retval[:success] = true
 
           return retval
         end

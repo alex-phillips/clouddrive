@@ -98,6 +98,31 @@ describe CloudDrive::Node do
       end
     end
 
+    context 'when MD5 and Path match' do
+      let(:exists_return) do
+        {
+          :success => true,
+          :data => success_data
+        }
+      end
+      let(:success_data) do
+        {
+          'md5_match' => true,
+          'path_match' => true
+        }
+      end
+      it do
+        expect(File).not_to receive :new
+        expect(RestClient).not_to receive :post
+
+        expect(CloudDrive::Node.upload_file(src_path, dest_path)).to eq(
+          :success => true,
+          :data => success_data,
+          :status_code => nil
+        )
+      end
+    end
+
     context 'when MD5 matches and Path does not match and options[:allow_duplicates] == true' do
       let(:exists_return) do
         {
