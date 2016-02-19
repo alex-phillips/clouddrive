@@ -10,12 +10,12 @@ describe CloudDrive::UploadCommand do
     let(:remote_path) { 'remote/path' }
     let(:results_method) { command.method :display_file_results }
     before do
-      allow(File).to receive(:exists?).with(config_file_location).and_return true
+      allow(File).to receive(:exist?).with(config_file_location).and_return true
       allow(File).to receive(:read).with(config_file_location).and_return config.to_json
       allow(CloudDrive::Sqlite).to receive(:new).and_return double(CloudDrive::Sqlite)
       allow(CloudDrive::Account).to receive(:new).and_return double(CloudDrive::Account, :authorize => { :success => true })
       allow(CloudDrive::Node).to receive :init
-      allow(File).to receive(:exists?).with(src_path).and_return true
+      allow(File).to receive(:exist?).with(src_path).and_return true
     end
     context 'uploading a directory without passing the --overwrite option' do
       it do
