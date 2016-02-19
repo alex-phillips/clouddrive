@@ -14,13 +14,11 @@ module CloudDrive
         node = Node.load_by_id(remote_path)
         unless node
           error("No node exists with ID '#{remote_path}'")
-          exit
         end
       else
         node = Node.load_by_path(remote_path)
         unless node
           error("No node exists at path '#{remote_path}'")
-          exit
         end
       end
 
