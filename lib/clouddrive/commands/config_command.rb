@@ -12,7 +12,6 @@ module CloudDrive
       if option
         unless @config.has_key?(option)
           error("Invalid option '#{option}'")
-          exit
         end
 
         if value

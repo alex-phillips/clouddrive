@@ -1,6 +1,23 @@
 # CloudDrive SDK and CLI
 
-This i a Ruby project built to interact with Amazon's CloudDrive API. It works as both an SDK and a CLI in the sense that I've built the code to easily be implemented in your own projects but it also includes an executable to run many common processes right from the command line.
+This is a Ruby project built to interact with Amazon's CloudDrive API. It works as both an SDK and a CLI in the sense that I've built the code to easily be implemented in your own projects but it also includes an executable to run many common processes right from the command line.
+
+## Obtaining Credentials
+
+To obtain credentials for the client you must have an Amazon Developer account.
+
+1. Register for an Amazon Developer account at [https://developer.amazon.com/](https://developer.amazon.com/)
+2. Create a Security Profile at
+   [https://developer.amazon.com/lwa/sp/overview.html](https://developer.amazon.com/lwa/sp/overview.html). Note the
+   Client ID and Client Secret that are generated for you
+2. Request that your Security Profile be whitelisted for the Cloud Drive API at
+   [https://developer.amazon.com/cd/sp/overview.html](https://developer.amazon.com/cd/sp/overview.html)
+   1. For **Account Access Control** select all options
+   2. For **Permission Level** select **Read and Write**
+   3. For **Platform Support** select **Amazon**
+3. Follow [these
+   instructions](https://developer.amazon.com/public/apis/engage/login-with-amazon/docs/adding_website.html) to add the
+   website **http://localhost** to **Allowed Return URLs** for your Security Profile
 
 ## Installation
 
@@ -17,6 +34,20 @@ And then execute:
 Or install it yourself as:
 
     $ gem install clouddrive
+
+Create a file at `~/.cache/clouddrive-ruby/config.json` with the following contents:
+```json
+{
+  "email": "YOUR EMAIL",
+  "client-id": "YOUR CLIENT ID",
+  "client-secret": "YOUR CLIENT SECRET"
+}
+
+Set the credentials on the file so that others cannot read it:
+
+    $ chmod 600 ~/.cache/clouddrive-ruby/config.json
+
+```
 
 ## CLI Usage
 

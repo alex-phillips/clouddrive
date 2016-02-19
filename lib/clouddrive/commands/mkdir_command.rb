@@ -10,7 +10,6 @@ module CloudDrive
       init
       if Node.exists?(remote_path)[:success]
         error("Node already exists at '#{remote_path}'")
-        exit
       end
 
       result = Node.create_directory_path(remote_path)

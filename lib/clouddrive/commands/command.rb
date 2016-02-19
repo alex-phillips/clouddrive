@@ -59,16 +59,19 @@ module CloudDrive
 
       @config = {}
       @cache_path = File.expand_path("~/.cache/clouddrive-ruby")
-      if File.exists?(get_config_path)
+      if File.exist?(get_config_path)
         data = File.read(get_config_path)
         if data != ''
           set_config(JSON.parse(data))
         end
+      else
+        error "Config file not found at #{get_config_path}, exiting..."
       end
     end
 
     def error(message)
       $stderr.puts "#{message}".colorize(:color => :white, :background => :red)
+      exit false
     end
 
     def format_filesize(bytes, decimals = 2)
@@ -113,7 +116,6 @@ module CloudDrive
         response = @account.authorize
         unless response[:success]
           error("Failed to authorize account. Use `init` command for initial authorization.")
-          exit
         end
       end
     end

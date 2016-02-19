@@ -9,11 +9,11 @@ module CloudDrive
       # Strip of trailing slashes
       cache_dir = File.expand_path(cache_dir)
 
-      if !File.exists?(cache_dir)
+      if !File.exist?(cache_dir)
         FileUtils.mkdir_p(cache_dir)
       end
 
-      if File.exists?("#{cache_dir}/#{email}.db")
+      if File.exist?("#{cache_dir}/#{email}.db")
         @db = Sequel.sqlite("#{cache_dir}/#{email}.db")
       else
         @db = Sequel.sqlite("#{cache_dir}/#{email}.db")
