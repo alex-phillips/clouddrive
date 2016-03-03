@@ -536,7 +536,7 @@ module CloudDrive
       @@cache.search_nodes_by_name(name)
     end
 
-    def self.upload_dir(src_path, dest_root, overwrite = false, callback = nil)
+    def self.upload_dir(src_path, dest_root, callback = nil, options = {})
       src_path = File.expand_path(src_path)
 
       dest_root = Node.get_path_array(dest_root)
@@ -551,7 +551,7 @@ module CloudDrive
         path_info = Pathname.new(file)
         remote_dest = path_info.dirname.sub(src_path, dest_root).to_s
 
-        result = Node.upload_file(file, remote_dest, overwrite)
+        result = Node.upload_file(file, remote_dest, options)
 
         unless result[:success]
           if result[:status_code] === 401
@@ -582,7 +582,7 @@ module CloudDrive
       retval
     end
 
-    def self.upload_file(src_path, dest_path, overwrite = false)
+    def self.upload_file(src_path, dest_path, options = {})
       retval = {
           :success => false,
           :data => {},
@@ -608,12 +608,13 @@ module CloudDrive
         if md5_match && path_match
           # Skip if path and MD5 match
           retval[:data] = result[:data]
+          retval[:success] = true
 
           return retval
         end
 
         if path_match && !md5_match
-          if overwrite
+          if options[:overwrite]
             return result[:data]["node"].overwrite(src_path)
           end
 
@@ -622,9 +623,7 @@ module CloudDrive
           return retval
         end
 
-        if !path_match && md5_match
-          # If path doesn't match but MD5 does, check if we allow deduping
-          # @TODO: finish this!
+        if !path_match && md5_match && !options[:allow_duplicates]
           retval[:data] = result[:data]
 
           return retval
@@ -642,7 +641,7 @@ module CloudDrive
           :content => File.new(File.expand_path(src_path), 'rb')
       }
 
-      RestClient.post("#{@@account.content_url}nodes", body, :Authorization => "Bearer #{@@account.token_store[:access_token]}") do |response, request, result|
+      RestClient.post("#{@@account.content_url}nodes", body, :Authorization => "Bearer #{@@account.token_store[:access_token]}") do |response|
         retval[:data] = JSON.parse(response.body)
         retval[:status_code] = response.code
         if response.code === 201
