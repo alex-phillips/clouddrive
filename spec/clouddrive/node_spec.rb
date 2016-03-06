@@ -35,17 +35,18 @@ describe CloudDrive::Node do
     let(:filename) { 'filename' }
     let(:src_path) { "/src/path/to/#{filename}" }
     let(:dest_path) { 'dest/path' }
+    let(:content_url) { 'https://example.com/content_url/' }
     before do
       expect(CloudDrive::Node).to receive(:load_by_path).with(dest_path).and_return double(CloudDrive::Node, :get_id => 'an id')
       expect(CloudDrive::Node).to receive(:exists?).with("#{dest_path}/#{filename}", src_path).and_return exists_return
     end
     context 'when MD5 and Path do not match' do
       let(:exists_return) { {} }
-      before { CloudDrive::Node.class_variable_set :@@account, double(CloudDrive::Account, :content_url => 'content url', :token_store => {}) }
+      before { CloudDrive::Node.class_variable_set :@@account, double(CloudDrive::Account, :content_url => content_url, :token_store => {}) }
       after { CloudDrive::Node.class_variable_set :@@account, nil }
       it do
         expect(File).to receive(:new).with(src_path, 'rb').and_return double(File)
-        expect(RestClient).to receive(:post).and_yield double(RestClient::Response, :body => '{}', :code => 201)
+        expect(RestClient).to receive(:post).with("#{content_url}nodes", any_args).and_yield double(RestClient::Response, :body => '{}', :code => 201)
         expect(CloudDrive::Node).to receive(:new).with({}).and_return(double(CloudDrive::Node, :save => nil))
 
         expect(CloudDrive::Node.upload_file(src_path, dest_path)).to eq(
@@ -58,11 +59,11 @@ describe CloudDrive::Node do
 
     context 'when MD5 and Path do not match and the upload is not successful' do
       let(:exists_return) { {} }
-      before { CloudDrive::Node.class_variable_set :@@account, double(CloudDrive::Account, :content_url => 'content url', :token_store => {}) }
+      before { CloudDrive::Node.class_variable_set :@@account, double(CloudDrive::Account, :content_url => content_url, :token_store => {}) }
       after { CloudDrive::Node.class_variable_set :@@account, nil }
       it do
         expect(File).to receive(:new).with(src_path, 'rb').and_return double(File)
-        expect(RestClient).to receive(:post).and_yield double(RestClient::Response, :body => '{}', :code => 500)
+        expect(RestClient).to receive(:post).with("#{content_url}nodes", any_args).and_yield double(RestClient::Response, :body => '{}', :code => 500)
         expect(CloudDrive::Node).not_to receive :new
 
         expect(CloudDrive::Node.upload_file(src_path, dest_path)).to eq(
@@ -136,11 +137,11 @@ describe CloudDrive::Node do
           'path_match' => false
         }
       end
-      before { CloudDrive::Node.class_variable_set :@@account, double(CloudDrive::Account, :content_url => 'content url', :token_store => {}) }
+      before { CloudDrive::Node.class_variable_set :@@account, double(CloudDrive::Account, :content_url => content_url, :token_store => {}) }
       after { CloudDrive::Node.class_variable_set :@@account, nil }
       it do
         expect(File).to receive(:new).with(src_path, 'rb').and_return double(File)
-        expect(RestClient).to receive(:post).and_yield double(RestClient::Response, :body => '{}', :code => 201)
+        expect(RestClient).to receive(:post).with("#{content_url}nodes?suppress=deduplication", any_args).and_yield double(RestClient::Response, :body => '{}', :code => 201)
         expect(CloudDrive::Node).to receive(:new).with({}).and_return(double(CloudDrive::Node, :save => nil))
 
         expect(CloudDrive::Node.upload_file(src_path, dest_path, :allow_duplicates => true)).to eq(
