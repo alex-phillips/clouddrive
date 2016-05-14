@@ -641,7 +641,9 @@ module CloudDrive
           :content => File.new(File.expand_path(src_path), 'rb')
       }
 
-      RestClient.post("#{@@account.content_url}nodes", body, :Authorization => "Bearer #{@@account.token_store[:access_token]}") do |response|
+      url = "#{@@account.content_url}nodes"
+      url = "#{url}?suppress=deduplication" if options[:allow_duplicates]
+      RestClient.post(url, body, :Authorization => "Bearer #{@@account.token_store[:access_token]}") do |response|
         retval[:data] = JSON.parse(response.body)
         retval[:status_code] = response.code
         if response.code === 201
